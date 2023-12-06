@@ -1,0 +1,5 @@
+.stack-work/
+*.hi
+*.o
+stack.yaml.lock
+xmonad-decoration-ex.cabal

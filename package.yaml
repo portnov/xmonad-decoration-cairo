@@ -1,0 +1,32 @@
+name:                xmonad-decoration-cairo
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/portnov/xmonad-decoration-cairo#readme
+license:             BSD-3-Clause
+author:              Ilya Portnov
+maintainer:          portnov84@rambler.ru
+copyright:           2023 Ilya V. Portnov
+category:            Desktop
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  - containers >= 0.6
+  - X11
+  - xmonad >= 0.17
+  - xmonad-contrib >= 0.17
+  - xmonad-decoration-ex
+  - data-default
+  - unix >= 2.7.3
+  - gi-cairo
+  - cairo
+
+ghc-options:
+  - -Wunused-imports
+
+library:
+  source-dirs: src
+
