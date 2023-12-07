@@ -48,8 +48,16 @@ stringToColor _ = (0.0, 0.0, 0.0)
 data CairoDecoration a = CairoDecoration
   deriving (Show, Read)
 
+data GradientType = Vertical | Horizontal
+  deriving (Eq, Show, Read)
+
+data Background =
+    Flat String
+  | Gradient GradientType [(Double, String)]
+  deriving (Eq, Show, Read)
+
 data CairoStyle = CairoStyle {
-    csBgColor :: String
+    csBackground :: Background
   , csBorderColor :: String
   , csTextColor :: String
   , csDecoBorderWidth :: Dimension
@@ -60,9 +68,9 @@ data CairoStyle = CairoStyle {
 themeC :: D.Theme -> ThemeC widget
 themeC t =
     GenericTheme {
-          exActive = CairoStyle (D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t) (borderColor $ D.activeColor t)
-        , exInactive = CairoStyle (D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) (borderColor $ D.inactiveColor t)
-        , exUrgent = CairoStyle (D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t) (borderColor $ D.urgentColor t)
+          exActive = CairoStyle (Flat $ D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t) (borderColor $ D.activeColor t)
+        , exInactive = CairoStyle (Flat $ D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) (borderColor $ D.inactiveColor t)
+        , exUrgent = CairoStyle (Flat $ D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t) (borderColor $ D.urgentColor t)
         , exPadding = BoxBorders 0 4 0 4
         , exFontName = D.fontName t
         , exDecoWidth = D.decoWidth t
@@ -85,7 +93,7 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
         => ThemeAttributes (ThemeC widget) where
   type Style (ThemeC widget) = CairoStyle
   selectWindowStyle theme w = windowStyle w theme
-  defaultBgColor t = csBgColor $ exInactive t
+  defaultBgColor t = "#888888"
   decorationSize t = (exDecoWidth t, exDecoHeight t)
   widgetsPadding = exPadding
   themeFontName = exFontName
@@ -138,20 +146,31 @@ instance DecorationStyleEx CairoDecoration Window where
   placeWidgets = defaultPlaceWidgets
 
   paintDecoration dstyle win windowWidth windowHeight dd = do
-    dpy <- asks display
-    let widgets = widgetLayout $ ddLabels dd
-        style = ddStyle dd
-        scr = defaultScreenOfDisplay dpy
-        visual = defaultVisualOfScreen scr
-        (bgR, bgG, bgB) = stringToColor (csBgColor style)
-    surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
-    io $ renderWith surface $ do
-      setSourceRGB bgR bgG bgB
-      rectangle 0 0 (fi windowWidth) (fi windowHeight)
-      fill
-    forM_ (zip widgets $ ddWidgetPlaces dd) $ \(widget, place) ->
-      paintWidget dstyle surface place dd widget
-    io $ Internal.surfaceDestroy surface
+      dpy <- asks display
+      let widgets = widgetLayout $ ddLabels dd
+          style = ddStyle dd
+          borders = csDecorationBorders style
+          borderWidth = fi $ csDecoBorderWidth style
+          scr = defaultScreenOfDisplay dpy
+          visual = defaultVisualOfScreen scr
+          widthD = fi windowWidth :: Double
+          heightD = fi windowHeight :: Double
+      surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
+      io $ renderWith surface $ do
+        paintBackground (csBackground style) widthD heightD
+        drawLineWith 0 0 widthD borderWidth (bxTop borders)
+        drawLineWith 0 0 borderWidth widthD (bxLeft borders)
+        drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
+        drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
+      forM_ (zip widgets $ ddWidgetPlaces dd) $ \(widget, place) ->
+        paintWidget dstyle surface place dd widget
+      io $ Internal.surfaceDestroy surface
+    where
+      drawLineWith x y w h color = do
+        let (r,g,b) = stringToColor color
+        setSourceRGB r g b
+        rectangle x y w h
+        fill
 
   paintWidget dstyle surface place dd widget = do
     dpy <- asks display
@@ -169,6 +188,25 @@ instance DecorationStyleEx CairoDecoration Window where
       selectFontFace (ddStyleState dd) FontSlantNormal FontWeightNormal
       moveTo (fi x) (fi y)
       showText str
+
+paintBackground :: Background -> Double -> Double -> Render ()
+paintBackground (Flat bgColor) width height = do
+  let (bgR, bgG, bgB) = stringToColor bgColor
+  setSourceRGB bgR bgG bgB
+  rectangle 0 0 width height
+  fill
+paintBackground (Gradient gradType stops) width height = do
+  let (x0, y0, x1, y1) =
+        case gradType of
+          Vertical -> (0, 0, 0, height)
+          Horizontal -> (0, 0, width, 0)
+  withLinearPattern x0 y0 x1 y1 $ \pattern -> do
+    forM_ stops $ \(offset, color) -> do
+      let (r,g,b) = stringToColor color
+      patternAddColorStopRGB pattern offset r g b
+    setSource pattern
+    rectangle 0 0 width height
+    fill
       
 cairoDecoration :: (Shrinker shrinker) => shrinker -> ThemeC StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration shrinker) l Window
