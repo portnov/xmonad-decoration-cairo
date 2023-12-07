@@ -6,15 +6,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module XMonad.Layout.DecorationEx.CairoDecoration where
 
+import Control.Concurrent
 import Data.Word
 import Data.Bits
 import qualified Data.Map as M
 import Numeric (readHex)
 import Graphics.Rendering.Cairo as Cairo
 import qualified Graphics.Rendering.Cairo.Internal as Internal
+import System.FilePath
 
 import XMonad
 import XMonad.Prelude
@@ -45,6 +48,29 @@ stringToColor ('#' : hx) =
   in  (fromIntegral r / 255.0, fromIntegral g / 255.0, fromIntegral b / 255.0)
 stringToColor _ = (0.0, 0.0, 0.0)
 
+data CairoTheme widget = CairoTheme {
+    ctActive :: CairoStyle
+  , ctInactive :: CairoStyle
+  , ctUrgent :: CairoStyle
+  , ctPadding :: BoxBorders Dimension
+  , ctFontName :: String
+  , ctFontSize :: Int
+  , ctDecoWidth :: Dimension
+  , ctDecoHeight :: Dimension
+  , ctOnDecoClick :: M.Map Int (WidgetCommand widget)
+  , ctDragWindowButtons :: [Int]
+  , ctIconsPath :: FilePath
+  , ctWidgetsLeft :: [widget]
+  , ctWidgetsCenter :: [widget]
+  , ctWidgetsRight :: [widget]
+  }
+
+deriving instance (Show widget, Show (WidgetCommand widget)) => Show (CairoTheme widget)
+deriving instance (Read widget, Read (WidgetCommand widget)) => Read (CairoTheme widget)
+
+instance HasWidgets CairoTheme widget where
+  themeWidgets t = WidgetLayout (ctWidgetsLeft t) (ctWidgetsCenter t) (ctWidgetsRight t)
+
 data CairoDecoration a = CairoDecoration
   deriving (Show, Read)
 
@@ -65,56 +91,84 @@ data CairoStyle = CairoStyle {
   }
   deriving (Show, Read)
 
-themeC :: D.Theme -> ThemeC widget
+themeC :: D.Theme -> CairoTheme widget
 themeC t =
-    GenericTheme {
-          exActive = CairoStyle (Flat $ D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t) (borderColor $ D.activeColor t)
-        , exInactive = CairoStyle (Flat $ D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) (borderColor $ D.inactiveColor t)
-        , exUrgent = CairoStyle (Flat $ D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t) (borderColor $ D.urgentColor t)
-        , exPadding = BoxBorders 0 4 0 4
-        , exFontName = D.fontName t
-        , exDecoWidth = D.decoWidth t
-        , exDecoHeight = D.decoHeight t
-        , exOnDecoClick = M.empty
-        , exDragWindowButtons = [1]
-        , exWidgetsLeft = []
-        , exWidgetsCenter = []
-        , exWidgetsRight = []
+    CairoTheme {
+          ctActive = CairoStyle (Flat $ D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t) (borderColor $ D.activeColor t)
+        , ctInactive = CairoStyle (Flat $ D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) (borderColor $ D.inactiveColor t)
+        , ctUrgent = CairoStyle (Flat $ D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t) (borderColor $ D.urgentColor t)
+        , ctPadding = BoxBorders 0 4 0 4
+        , ctFontName = D.fontName t
+        , ctFontSize = 12
+        , ctDecoWidth = D.decoWidth t
+        , ctDecoHeight = D.decoHeight t
+        , ctOnDecoClick = M.empty
+        , ctDragWindowButtons = [1]
+        , ctIconsPath = "."
+        , ctWidgetsLeft = []
+        , ctWidgetsCenter = []
+        , ctWidgetsRight = []
       }
 
-type ThemeC widget = GenericTheme CairoStyle widget
-
-instance ClickHandler (GenericTheme CairoStyle) StandardWidget where
-  onDecorationClick theme button = M.lookup button (exOnDecoClick theme)
-  isDraggingEnabled theme button = button `elem` exDragWindowButtons theme
+instance ClickHandler CairoTheme StandardWidget where
+  onDecorationClick theme button = M.lookup button (ctOnDecoClick theme)
+  isDraggingEnabled theme button = button `elem` ctDragWindowButtons theme
 
 instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCommand widget),
-          Read (ThemeC widget), Show (ThemeC widget))
-        => ThemeAttributes (ThemeC widget) where
-  type Style (ThemeC widget) = CairoStyle
-  selectWindowStyle theme w = windowStyle w theme
+          Read (CairoTheme widget), Show (CairoTheme widget))
+        => ThemeAttributes (CairoTheme widget) where
+  type Style (CairoTheme widget) = CairoStyle
+
+  selectWindowStyle theme win = do
+    styleType <- windowStyleType win
+    return $ case styleType of
+               ActiveWindow -> ctActive theme
+               InactiveWindow -> ctInactive theme
+               UrgentWindow -> ctUrgent theme
+
   defaultBgColor t = "#888888"
-  decorationSize t = (exDecoWidth t, exDecoHeight t)
-  widgetsPadding = exPadding
-  themeFontName = exFontName
+  decorationSize t = (ctDecoWidth t, ctDecoHeight t)
+  widgetsPadding = ctPadding
+  themeFontName = ctFontName
+
+type ImagesCache = M.Map String Surface
+
+data CairoDecoStyleState = CairoDecoStyleState {
+    cdssFontName :: String
+  , cdssFontSize :: Int
+  , cdssIconsPath :: FilePath
+  , cdssImages :: MVar ImagesCache
+  }
 
 instance DecorationStyleEx CairoDecoration Window where
-  type Theme CairoDecoration = GenericTheme CairoStyle
+  type Theme CairoDecoration = CairoTheme
   type Widget CairoDecoration = StandardWidget
   type DecorationPaintingContext CairoDecoration = Surface
-  type DecorationStyleState CairoDecoration = String
+  type DecorationStyleState CairoDecoration = CairoDecoStyleState
 
   describeDecoration _ = "CairoDecoration"
 
-  initializeState _ theme = return $ themeFontName theme
-  releaseStateResources _ _ = return ()
+  initializeState _ theme = do
+    var <- io $ newMVar M.empty
+    return $ CairoDecoStyleState {
+      cdssFontName = ctFontName theme,
+      cdssFontSize = ctFontSize theme,
+      cdssIconsPath = ctIconsPath theme,
+      cdssImages = var
+    }
 
-  getShrinkedWindowName dstyle shrinker font win wh ht = do
+  releaseStateResources _ st = do
+    mbCache <- io $ tryTakeMVar (cdssImages st)
+    whenJust mbCache $ \cache ->
+      forM_ (M.elems cache) $ \surface ->
+        io $ Internal.surfaceDestroy surface
+
+  getShrinkedWindowName dstyle shrinker st win wh ht = do
     let calcWidth text =
           io $ withImageSurface FormatARGB32 (fi wh) (fi ht) $ \surface ->
             renderWith surface $ do
-              setFontSize 12
-              selectFontFace font FontSlantNormal FontWeightNormal
+              setFontSize (fi $ cdssFontSize st)
+              selectFontFace (cdssFontName st) FontSlantNormal FontWeightNormal
               ext <- Cairo.textExtents text
               return $ round $ textExtentsWidth ext
     -- xmonad-contrib #809
@@ -126,22 +180,6 @@ instance DecorationStyleEx CairoDecoration Window where
     D.shrinkWhile s (\n -> do
                            size <- calcWidth n
                            return $ size > fromIntegral wh - fromIntegral (ht `div` 2)) nw
-
-  calcWidgetPlace dstyle dd widget = do
-    let decoRect = ddDecoRect dd
-        decoWidth = fi $ rect_width decoRect
-        decoHeight = fi $ rect_height decoRect
-    str <- widgetString dd widget
-    io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
-      renderWith surface $ do
-        setFontSize 12
-        ext <- Cairo.textExtents str
-        let textWidth = textExtentsWidth ext
-            textHeight = textExtentsHeight ext
-            y = (fi decoHeight - textHeight) / 2.0
-            y0 = round $ y - textExtentsYbearing ext
-            rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
-        return $ WidgetPlace y0 rect
 
   placeWidgets = defaultPlaceWidgets
 
@@ -172,22 +210,53 @@ instance DecorationStyleEx CairoDecoration Window where
         rectangle x y w h
         fill
 
+  calcWidgetPlace dstyle dd widget = do
+    let decoRect = ddDecoRect dd
+        decoWidth = fi $ rect_width decoRect
+        decoHeight = fi $ rect_height decoRect
+    res <- getWidgetImage dd widget
+    case res of
+      Left str -> do
+        io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
+          renderWith surface $ do
+            setFontSize (fi $ cdssFontSize $ ddStyleState dd)
+            selectFontFace (cdssFontName $ ddStyleState dd) FontSlantNormal FontWeightNormal
+            ext <- Cairo.textExtents str
+            let textWidth = textExtentsWidth ext
+                textHeight = textExtentsHeight ext
+                y = (fi decoHeight - textHeight) / 2.0
+                y0 = round $ y - textExtentsYbearing ext
+                rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
+            return $ WidgetPlace y0 rect
+      Right image -> do
+        imgWidth <- io $ imageSurfaceGetWidth image
+        imgHeight <- io $ imageSurfaceGetHeight image
+        let width' = (fi imgWidth / fi imgHeight) * fi decoHeight
+        return $ WidgetPlace 0 $ Rectangle 0 0 (round width') (fi decoHeight)
+
   paintWidget dstyle surface place dd widget = do
     dpy <- asks display
     let style = ddStyle dd
-        x = rect_x (wpRectangle place)
-        y = wpTextYPosition place
+        rect = wpRectangle place
         decoRect = ddDecoRect dd
         decoWidth = fi $ rect_width decoRect
         decoHeight = fi $ rect_height decoRect
         (textR, textG, textB) = stringToColor (csTextColor style)
-    str <- widgetString dd widget
+    res <- getWidgetImage dd widget 
     renderWith surface $ do
-      setSourceRGB textR textG textB
-      setFontSize 12
-      selectFontFace (ddStyleState dd) FontSlantNormal FontWeightNormal
-      moveTo (fi x) (fi y)
-      showText str
+      case res of
+        Left str -> do
+          let x = rect_x rect
+              y = wpTextYPosition place
+          setSourceRGB textR textG textB
+          setFontSize (fi $ cdssFontSize $ ddStyleState dd)
+          selectFontFace (cdssFontName $ ddStyleState dd) FontSlantNormal FontWeightNormal
+          moveTo (fi x) (fi y)
+          showText str
+        Right image -> do
+          setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
+          rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
+          fill
 
 paintBackground :: Background -> Double -> Double -> Render ()
 paintBackground (Flat bgColor) width height = do
@@ -207,8 +276,36 @@ paintBackground (Gradient gradType stops) width height = do
     setSource pattern
     rectangle 0 0 width height
     fill
+
+getWidgetImage :: DrawData CairoDecoration -> StandardWidget -> X (Either String Surface)
+getWidgetImage dd TitleWidget = return $ Left $ ddWindowTitle dd
+getWidgetImage dd widget = do
+  checked <- isWidgetChecked widget (ddOrigWindow dd)
+  let imageName = if checked
+                    then swCheckedText widget
+                    else swUncheckedText widget
+  let path = cdssIconsPath (ddStyleState dd) </> imageName
+  Right <$> getImageSurface (cdssImages $ ddStyleState dd) path
+
+getImageSurface :: MVar ImagesCache -> String -> X Surface
+getImageSurface var path = do
+  io $ modifyMVar var $ \cache -> do
+    case M.lookup path cache of
+      Just surface -> return (cache, surface)
+      Nothing -> do
+        surface <- imageSurfaceCreateFromPNG path
+        let cache' = M.insert path surface cache
+        return (cache', surface)
       
-cairoDecoration :: (Shrinker shrinker) => shrinker -> ThemeC StandardWidget -> l Window
+cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration shrinker) l Window
 cairoDecoration s theme = decorationEx s theme CairoDecoration
+
+toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
+minimizeC = StandardWidget "minimize.png" "minimize.png" Minimize
+maximizeC = StandardWidget "maximize.png" "maximize.png" ToggleMaximize
+closeC = StandardWidget "close.png" "close.png" CloseWindow
+dwmpromoteC = StandardWidget "demote.png" "promote.png" DwmPromote
+moveToNextGroupC = StandardWidget "" "right.png" MoveToNextGroup
+moveToPrevGroupC = StandardWidget "" "left.png" MoveToPrevGroup
 

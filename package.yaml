@@ -23,6 +23,7 @@ dependencies:
   - unix >= 2.7.3
   - gi-cairo
   - cairo
+  - filepath
 
 ghc-options:
   - -Wunused-imports
