@@ -11,6 +11,7 @@
    sodipodi:docname="minimize.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <sodipodi:namedview
@@ -27,37 +28,25 @@
      inkscape:cx="10.187054"
      inkscape:cy="15.837685"
      inkscape:window-width="1916"
-     inkscape:window-height="1168"
-     inkscape:window-x="0"
+     inkscape:window-height="1048"
+     inkscape:window-x="1920"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
      id="defs1">
-    <filter
-       inkscape:collect="always"
-       style="color-interpolation-filters:sRGB"
-       id="filter1"
-       x="-0.11032303"
-       y="-0.42884032"
-       width="1.2206461"
-       height="1.8576806">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="0.17699343"
-         id="feGaussianBlur1" />
-    </filter>
-    <clipPath
-       clipPathUnits="userSpaceOnUse"
-       id="clipPath2">
-      <rect
-         style="opacity:1;fill:none;stroke:#000000;stroke-width:0;stroke-dasharray:none"
-         id="rect4"
-         width="4.8143778"
-         height="1.238542"
-         x="1.8261443"
-         y="5.4203095" />
-    </clipPath>
+    <linearGradient
+       id="linearGradient1"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0.40000001;"
+         offset="0"
+         id="stop1" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
     <clipPath
        clipPathUnits="userSpaceOnUse"
        id="clipPath4">
@@ -69,26 +58,27 @@
          x="1.8261443"
          y="5.4203095" />
     </clipPath>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient2"
+       x1="1.8514529"
+       y1="5.4196792"
+       x2="3.0912557"
+       y2="6.659482"
+       gradientUnits="userSpaceOnUse" />
   </defs>
   <g
      inkscape:label="Слой 1"
      inkscape:groupmode="layer"
      id="layer1">
     <rect
-       style="opacity:1;fill:none;stroke:#000000;stroke-width:0.212705;filter:url(#filter1)"
-       id="rect3"
-       width="4.8143778"
-       height="1.238542"
-       x="1.8261443"
-       y="5.4203095"
-       clip-path="url(#clipPath4)" />
-    <rect
-       style="opacity:1;fill:none;stroke:#000000;stroke-width:0.212705;filter:url(#filter1)"
+       style="opacity:1;fill:url(#linearGradient2);stroke:#000000;stroke-width:0.26458333;stroke-dasharray:none;stroke-opacity:0.60000002;fill-opacity:1"
        id="rect1"
-       width="4.8143778"
-       height="1.238542"
-       x="1.8261443"
-       y="5.4203095"
-       clip-path="url(#clipPath2)" />
+       width="4.7637606"
+       height="1.2398026"
+       x="1.8514529"
+       y="5.4196792"
+       clip-path="none" />
   </g>
 </svg>
