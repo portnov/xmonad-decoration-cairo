@@ -31,6 +31,7 @@ import XMonad.Layout.DecorationEx.Types
 import XMonad.Layout.DecorationEx.DecorationStyleEx
 import XMonad.Layout.DecorationEx.Widgets
 import XMonad.Layout.DecorationEx.TabbedTextDecoration
+import XMonad.Layout.DecorationEx.DwmTextDecoration
 
 import Graphics.X11.Cairo.CairoSurface
 
@@ -308,6 +309,10 @@ cairoDecoration s theme = decorationEx s theme CairoDecoration DefaultGeometry
 cairoTabDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration TabbedGeometry shrinker) l Window
 cairoTabDecoration s theme = decorationEx s theme CairoDecoration (TabbedGeometry U)
+
+cairoDwmDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
+cairoDwmDecoration s theme = decorationEx s theme CairoDecoration (DwmGeometry True)
 
 toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
 minimizeC = StandardWidget "minimize.png" "minimize.png" Minimize
