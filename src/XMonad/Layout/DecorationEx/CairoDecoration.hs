@@ -24,11 +24,13 @@ import XMonad.Prelude
 import XMonad.Layout.Decoration (ModifiedLayout, Shrinker (..))
 import qualified XMonad.Layout.Decoration as D
 import XMonad.Util.NamedWindows (getName)
+import XMonad.Util.Types
 
 import XMonad.Layout.DecorationEx.LayoutModifier
 import XMonad.Layout.DecorationEx.Types
 import XMonad.Layout.DecorationEx.DecorationStyleEx
 import XMonad.Layout.DecorationEx.Widgets
+import XMonad.Layout.DecorationEx.TabbedTextDecoration
 
 import Graphics.X11.Cairo.CairoSurface
 
@@ -114,6 +116,9 @@ instance ClickHandler CairoTheme StandardWidget where
   onDecorationClick theme button = M.lookup button (ctOnDecoClick theme)
   isDraggingEnabled theme button = button `elem` ctDragWindowButtons theme
 
+instance HasDecorationSize (CairoTheme widget) where
+  decorationSize t = (ctDecoWidth t, ctDecoHeight t)
+
 instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCommand widget),
           Read (CairoTheme widget), Show (CairoTheme widget))
         => ThemeAttributes (CairoTheme widget) where
@@ -127,7 +132,6 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
                UrgentWindow -> ctUrgent theme
 
   defaultBgColor t = "#888888"
-  decorationSize t = (ctDecoWidth t, ctDecoHeight t)
   widgetsPadding = ctPadding
   themeFontName = ctFontName
 
@@ -140,15 +144,15 @@ data CairoDecoStyleState = CairoDecoStyleState {
   , cdssImages :: MVar ImagesCache
   }
 
-instance DecorationStyleEx CairoDecoration Window where
+instance DecorationEngine CairoDecoration Window where
   type Theme CairoDecoration = CairoTheme
   type Widget CairoDecoration = StandardWidget
   type DecorationPaintingContext CairoDecoration = Surface
   type DecorationStyleState CairoDecoration = CairoDecoStyleState
 
-  describeDecoration _ = "CairoDecoration"
+  describeEngine _ = "CairoDecoration"
 
-  initializeState _ theme = do
+  initializeState _ _ theme = do
     var <- io $ newMVar M.empty
     return $ CairoDecoStyleState {
       cdssFontName = ctFontName theme,
@@ -298,8 +302,12 @@ getImageSurface var path = do
         return (cache', surface)
       
 cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
-             -> ModifiedLayout (DecorationEx CairoDecoration shrinker) l Window
-cairoDecoration s theme = decorationEx s theme CairoDecoration
+             -> ModifiedLayout (DecorationEx CairoDecoration DefaultGeometry shrinker) l Window
+cairoDecoration s theme = decorationEx s theme CairoDecoration DefaultGeometry
+
+cairoTabDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration TabbedGeometry shrinker) l Window
+cairoTabDecoration s theme = decorationEx s theme CairoDecoration (TabbedGeometry U)
 
 toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
 minimizeC = StandardWidget "minimize.png" "minimize.png" Minimize
