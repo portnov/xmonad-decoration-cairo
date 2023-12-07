@@ -9,6 +9,9 @@
    id="svg1"
    inkscape:version="1.3 (1:1.3+202307231459+0e150ed6c4)"
    sodipodi:docname="close.svg"
+   inkscape:export-filename="close.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,8 +27,8 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
      inkscape:zoom="18.847451"
-     inkscape:cx="10.187054"
-     inkscape:cy="15.837685"
+     inkscape:cx="7.6402905"
+     inkscape:cy="14.033728"
      inkscape:window-width="1916"
      inkscape:window-height="1168"
      inkscape:window-x="0"
@@ -33,14 +36,114 @@
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
-     id="defs1" />
+     id="defs1">
+    <filter
+       inkscape:label="Basic Two Lights Bump"
+       inkscape:menu="Bumps"
+       inkscape:menu-tooltip="Two types of lighting emboss effect"
+       style="color-interpolation-filters:sRGB;"
+       id="filter4"
+       x="-0.027089928"
+       y="-0.027089928"
+       width="1.0541799"
+       height="1.0541799">
+      <feColorMatrix
+         result="result2"
+         type="luminanceToAlpha"
+         in="SourceGraphic"
+         id="feColorMatrix1" />
+      <feSpecularLighting
+         specularConstant="0.5"
+         surfaceScale="-15"
+         specularExponent="10"
+         result="result10"
+         id="feSpecularLighting1">
+        <feDistantLight
+           elevation="20"
+           azimuth="225"
+           id="feDistantLight1" />
+      </feSpecularLighting>
+      <feDiffuseLighting
+         diffuseConstant="0.5"
+         surfaceScale="15"
+         id="feDiffuseLighting2">
+        <feDistantLight
+           azimuth="225"
+           elevation="20"
+           id="feDistantLight2" />
+      </feDiffuseLighting>
+      <feComposite
+         result="result11"
+         in2="result10"
+         operator="arithmetic"
+         k2="0.5"
+         k3="0.5"
+         id="feComposite2" />
+      <feComposite
+         in="result11"
+         result="result9"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         in2="SourceGraphic"
+         id="feComposite3" />
+      <feComposite
+         in2="SourceGraphic"
+         operator="in"
+         in="result9"
+         id="feComposite4" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter40"
+       x="-0.2129868"
+       y="-0.2129868"
+       width="1.4259736"
+       height="1.4259736">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="0.44785679"
+         id="feGaussianBlur40" />
+    </filter>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath1">
+      <path
+         id="path2"
+         style="opacity:1;fill:none;stroke:#000000;stroke-width:0;stroke-dasharray:none"
+         d="M 5.608097,1.3423316 4.2333333,2.7170955 2.8585695,1.3423316 1.3423316,2.8585695 2.7170955,4.2333333 1.3423316,5.608097 2.8585695,7.1243348 4.2333333,5.7495714 5.608097,7.1243348 7.1243348,5.608097 5.7495714,4.2333333 7.1243348,2.8585695 Z" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath2">
+      <path
+         id="path3"
+         style="opacity:1;fill:none;stroke:#000000;stroke-width:0;stroke-dasharray:none"
+         d="M 5.608097,1.3423316 4.2333333,2.7170955 2.8585695,1.3423316 1.3423316,2.8585695 2.7170955,4.2333333 1.3423316,5.608097 2.8585695,7.1243348 4.2333333,5.7495714 5.608097,7.1243348 7.1243348,5.608097 5.7495714,4.2333333 7.1243348,2.8585695 Z" />
+    </clipPath>
+  </defs>
   <g
      inkscape:label="Слой 1"
      inkscape:groupmode="layer"
      id="layer1">
     <path
-       id="rect1"
-       style="opacity:1;fill:none;stroke:#000000;stroke-width:0.285498"
-       d="M 6.0051945,0.50727248 4.2333333,2.2791337 2.461472,0.50727248 0.50727243,2.4614721 2.2791336,4.2333333 0.50727248,6.0051945 2.4614721,7.9593941 4.2333333,6.1875329 6.0051944,7.9593941 7.9593941,6.0051945 6.1875329,4.2333333 7.9593941,2.4614721 Z" />
+       id="path40"
+       style="opacity:1;mix-blend-mode:normal;fill:none;stroke:#000000;stroke-width:0.221514;filter:url(#filter40)"
+       d="M 5.6080971,1.3423317 4.2333333,2.7170955 2.8585694,1.3423317 1.3423317,2.8585695 2.7170954,4.2333333 1.3423317,5.6080971 2.8585695,7.1243349 4.2333333,5.7495711 5.608097,7.1243349 7.1243349,5.6080971 5.7495711,4.2333333 7.1243349,2.8585695 Z"
+       clip-path="url(#clipPath2)"
+       inkscape:export-filename="./path40.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"
+       transform="matrix(0.86943628,0,0,0.86943628,0.55271976,0.55271976)" />
+    <path
+       id="path1"
+       style="opacity:1;mix-blend-mode:normal;fill:none;stroke:#000000;stroke-width:0.221514;filter:url(#filter40)"
+       d="M 5.6080971,1.3423317 4.2333333,2.7170955 2.8585694,1.3423317 1.3423317,2.8585695 2.7170954,4.2333333 1.3423317,5.6080971 2.8585695,7.1243349 4.2333333,5.7495711 5.608097,7.1243349 7.1243349,5.6080971 5.7495711,4.2333333 7.1243349,2.8585695 Z"
+       clip-path="url(#clipPath1)"
+       inkscape:export-filename="./path40.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"
+       transform="matrix(0.86943628,0,0,0.86943628,0.55271976,0.55271976)" />
   </g>
 </svg>
