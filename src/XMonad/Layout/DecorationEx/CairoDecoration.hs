@@ -74,9 +74,11 @@ data CairoDecoration a = CairoDecoration
 data GradientType = Vertical | Horizontal
   deriving (Eq, Show, Read)
 
+type GradientStops = [(Double, String)]
+
 data Background =
     Flat String
-  | Gradient GradientType [(Double, String)]
+  | Gradient GradientType GradientStops
   deriving (Eq, Show, Read)
 
 data CairoStyle = CairoStyle {
@@ -87,6 +89,15 @@ data CairoStyle = CairoStyle {
   , csDecorationBorders :: BorderColors
   }
   deriving (Show, Read)
+
+simpleGradient :: String -> String -> GradientStops
+simpleGradient from to = [(0.0, from), (1.0, to)]
+
+stripesGradient :: Int -> String -> String -> GradientStops
+stripesGradient nStops color1 color2 =
+  let stops = [fi i / fi nStops | i <- [0 .. nStops]]
+      colors = take nStops $ cycle [color1, color2]
+  in  zip stops colors
 
 themeC :: D.Theme -> CairoTheme widget
 themeC t =
