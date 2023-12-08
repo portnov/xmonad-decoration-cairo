@@ -23,15 +23,9 @@ import XMonad
 import XMonad.Prelude
 import XMonad.Layout.Decoration (ModifiedLayout, Shrinker (..))
 import qualified XMonad.Layout.Decoration as D
-import XMonad.Util.NamedWindows (getName)
 import XMonad.Util.Types
 
-import XMonad.Layout.DecorationEx.LayoutModifier
-import XMonad.Layout.DecorationEx.Types
-import XMonad.Layout.DecorationEx.DecorationStyleEx
-import XMonad.Layout.DecorationEx.Widgets
-import XMonad.Layout.DecorationEx.TabbedTextDecoration
-import XMonad.Layout.DecorationEx.DwmTextDecoration
+import XMonad.Layout.DecorationEx
 
 import Graphics.X11.Cairo.CairoSurface
 
@@ -149,7 +143,7 @@ instance DecorationEngine CairoDecoration Window where
   type Theme CairoDecoration = CairoTheme
   type Widget CairoDecoration = StandardWidget
   type DecorationPaintingContext CairoDecoration = Surface
-  type DecorationStyleState CairoDecoration = CairoDecoStyleState
+  type DecorationEngineState CairoDecoration = CairoDecoStyleState
 
   describeEngine _ = "CairoDecoration"
 
@@ -168,7 +162,7 @@ instance DecorationEngine CairoDecoration Window where
       forM_ (M.elems cache) $ \surface ->
         io $ Internal.surfaceDestroy surface
 
-  getShrinkedWindowName dstyle shrinker st win wh ht = do
+  getShrinkedWindowName dstyle shrinker st name wh ht = do
     let calcWidth text =
           io $ withImageSurface FormatARGB32 (fi wh) (fi ht) $ \surface ->
             renderWith surface $ do
@@ -176,19 +170,14 @@ instance DecorationEngine CairoDecoration Window where
               selectFontFace (cdssFontName st) FontSlantNormal FontWeightNormal
               ext <- Cairo.textExtents text
               return $ round $ textExtentsWidth ext
-    -- xmonad-contrib #809
-    -- qutebrowser will happily shovel a 389K multiline string into @_NET_WM_NAME@
-    -- and the 'defaultShrinker' (a) doesn't handle multiline strings well (b) is
-    -- quadratic due to using 'init'
-    nw  <- fmap (take 2048 . takeWhile (/= '\n') . show) (getName win)
     let s = shrinkIt shrinker
     D.shrinkWhile s (\n -> do
                            size <- calcWidth n
-                           return $ size > fromIntegral wh - fromIntegral (ht `div` 2)) nw
+                           return $ size > fromIntegral wh) name
 
   placeWidgets = defaultPlaceWidgets
 
-  paintDecoration dstyle win windowWidth windowHeight dd = do
+  paintDecoration dstyle win windowWidth windowHeight shrinker dd = do
       dpy <- asks display
       let widgets = widgetLayout $ ddLabels dd
           style = ddStyle dd
@@ -206,7 +195,7 @@ instance DecorationEngine CairoDecoration Window where
         drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
         drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
       forM_ (zip widgets $ ddWidgetPlaces dd) $ \(widget, place) ->
-        paintWidget dstyle surface place dd widget
+        paintWidget dstyle surface place shrinker dd widget
       io $ Internal.surfaceDestroy surface
     where
       drawLineWith x y w h color = do
@@ -239,7 +228,7 @@ instance DecorationEngine CairoDecoration Window where
         let width' = (fi imgWidth / fi imgHeight) * fi decoHeight
         return $ WidgetPlace 0 $ Rectangle 0 0 (round width') (fi decoHeight)
 
-  paintWidget dstyle surface place dd widget = do
+  paintWidget engine surface place shrinker dd widget = do
     dpy <- asks display
     let style = ddStyle dd
         rect = wpRectangle place
@@ -248,17 +237,21 @@ instance DecorationEngine CairoDecoration Window where
         decoHeight = fi $ rect_height decoRect
         (textR, textG, textB) = stringToColor (csTextColor style)
     res <- getWidgetImage dd widget 
-    renderWith surface $ do
-      case res of
-        Left str -> do
-          let x = rect_x rect
-              y = wpTextYPosition place
+    case res of
+      Left str -> do
+        let x = rect_x rect
+            y = wpTextYPosition place
+        str' <- if isShrinkable widget
+                  then getShrinkedWindowName engine shrinker (ddStyleState dd) str (rect_width rect) (rect_height rect) 
+                  else return str
+        renderWith surface $ do
           setSourceRGB textR textG textB
           setFontSize (fi $ cdssFontSize $ ddStyleState dd)
           selectFontFace (cdssFontName $ ddStyleState dd) FontSlantNormal FontWeightNormal
           moveTo (fi x) (fi y)
-          showText str
-        Right image -> do
+          showText str'
+      Right image -> do
+        renderWith surface $ do
           setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
           rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
           fill
