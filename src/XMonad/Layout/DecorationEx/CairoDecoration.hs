@@ -8,7 +8,24 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module XMonad.Layout.DecorationEx.CairoDecoration where
+module XMonad.Layout.DecorationEx.CairoDecoration (
+    ImageUsage (..),
+    Fill (..),
+    CentralPanelBackground (..),
+    GradientStops (..), GradientType (..),
+    CairoStyle (..),
+    CairoTheme (..),
+    CairoDecoration (..),
+    simpleGradient,
+    stripesGradient,
+    themeC,
+    cairoDecoration,
+    cairoTabDecoration,
+    cairoDwmDecoration,
+    toggleStickyC, minimizeC, maximizeC,
+    closeC, dwmpromoteC,
+    moveToNextGroupC, moveToPrevGroupC
+  ) where
 
 import Control.Concurrent
 import Data.Word
@@ -17,7 +34,6 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Numeric (readHex)
 import GI.Cairo.Render as Cairo
-import qualified GI.Cairo.Render.Internal as Internal
 import qualified GI.Cairo.Render.Connector as Connector
 import qualified GI.Rsvg as Rsvg
 import System.FilePath
