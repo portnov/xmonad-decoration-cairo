@@ -35,6 +35,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Numeric (readHex)
 import GI.Cairo.Render as Cairo
+import qualified GI.Cairo.Render.Internal as Internal
 import qualified GI.Cairo.Render.Connector as Connector
 import qualified GI.Rsvg as Rsvg
 import System.FilePath
@@ -44,6 +45,7 @@ import XMonad.Prelude
 import XMonad.Layout.Decoration (ModifiedLayout, Shrinker (..))
 import qualified XMonad.Layout.Decoration as D
 import XMonad.Util.Types
+import qualified XMonad.Util.ExtensibleState as XS
 
 import XMonad.Layout.DecorationEx
 
@@ -194,7 +196,18 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
   widgetsPadding = ctPadding
   themeFontName = ctFontName
 
-type ImagesCache = M.Map String Surface
+type ImagesData = M.Map String Surface
+
+newtype ImagesCache = ImagesCache ImagesData
+  deriving Typeable
+
+instance ExtensionClass ImagesCache where
+  initialValue = ImagesCache M.empty
+
+getImagesCache :: X ImagesData
+getImagesCache = do
+  ImagesCache cache <- XS.get
+  return cache
 
 data CairoEngineState = CairoEngineState {
     cdssFontName :: String
@@ -202,7 +215,6 @@ data CairoEngineState = CairoEngineState {
   , cdssFontWeight :: FontWeight
   , cdssFontSlant :: FontSlant
   , cdssIconsPath :: FilePath
-  , cdssImages :: MVar ImagesCache
   }
 
 instance DecorationEngine CairoDecoration Window where
@@ -214,22 +226,21 @@ instance DecorationEngine CairoDecoration Window where
   describeEngine _ = "CairoDecoration"
 
   initializeState _ _ theme = do
-    var <- io $ newMVar M.empty
+    -- cache <- getImagesCache
+    XS.put $ ImagesCache M.empty
     return $ CairoEngineState {
       cdssFontName = ctFontName theme,
       cdssFontSize = ctFontSize theme,
       cdssFontWeight = ctFontWeight theme,
       cdssFontSlant = ctFontSlant theme,
-      cdssIconsPath = ctIconsPath theme,
-      cdssImages = var
+      cdssIconsPath = ctIconsPath theme
     }
 
   releaseStateResources _ st = do
-    mbCache <- io $ tryTakeMVar (cdssImages st)
-    whenJust mbCache $ \cache ->
-      forM_ (M.elems cache) $ \surface ->
-        io $ surfaceFinish surface
-        -- io $ Internal.surfaceDestroy surface
+    cache <- getImagesCache
+    forM_ (M.elems cache) $ \surface -> do
+      io $ surfaceFinish surface
+      io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName dstyle shrinker st name wh ht = do
     let calcWidth text =
@@ -293,7 +304,7 @@ instance DecorationEngine CairoDecoration Window where
       forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
         paintWidget dstyle surface place shrinker dd widget
       io $ surfaceFinish surface
-      -- io $ Internal.surfaceDestroy surface
+      io $ Internal.surfaceDestroy surface
     where
       drawLineWith x y w h color = do
         let (r,g,b) = stringToColor color
@@ -456,24 +467,30 @@ getWidgetImage dd widget = do
 getImageSurface' :: DrawData CairoDecoration -> String -> X Surface
 getImageSurface' dd imageName = do
   let path = cdssIconsPath (ddStyleState dd) </> imageName
-  getImageSurface (cdssImages $ ddStyleState dd) path
+  getImageSurface path
 
-getImageSurface :: MVar ImagesCache -> String -> X Surface
-getImageSurface var path = do
-  io $ modifyMVar var $ \cache -> do
+getImageSurface :: String -> X Surface
+getImageSurface path = do
+  cache <- getImagesCache
+  surface <-
     case M.lookup path cache of
-      Just surface -> return (cache, surface)
+      Just surface -> return surface
       Nothing -> do
-        surface <- loadImageSurface path
+        surface <- io $ loadImageSurface path
         let cache' = M.insert path surface cache
-        return (cache', surface)
+        return surface
+  XS.put $ ImagesCache $ M.insert path surface cache
+  return surface
 
 loadImageSurface :: FilePath -> IO Surface
 loadImageSurface path =
   case map toLower (takeExtension path) of
-    ".png" -> imageSurfaceCreateFromPNG path
+    ".png" -> do
+      putStrLn $ "Loading PNG: " ++ path
+      imageSurfaceCreateFromPNG path
     ".svg" -> do
       Just svgHandle <- Rsvg.handleNewFromFile (T.pack path)
+      putStrLn $ "Loading SVG: " ++ path
       w <- Rsvg.getHandleWidth svgHandle
       h <- Rsvg.getHandleHeight svgHandle
       surface <- createImageSurface FormatARGB32 (fi w) (fi h)
@@ -500,11 +517,11 @@ cairoDwmDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidg
              -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
 cairoDwmDecoration s theme = decorationEx s theme CairoDecoration (DwmGeometry True)
 
-toggleStickyC = StandardWidget "sticky.svg" "sticky.svg" ToggleSticky
-minimizeC = StandardWidget "minimize.svg" "minimize.svg" Minimize
-maximizeC = StandardWidget "maximize.svg" "maximize.svg" ToggleMaximize
-closeC = StandardWidget "close.svg" "close.svg" CloseWindow
-dwmpromoteC = StandardWidget "demote.svg" "promote.svg" DwmPromote
-moveToNextGroupC = StandardWidget "" "right.svg" MoveToNextGroup
-moveToPrevGroupC = StandardWidget "" "left.svg" MoveToPrevGroup
+toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
+minimizeC = StandardWidget "png/minimize.png" "png/minimize.png" Minimize
+maximizeC = StandardWidget "png/maximize.png" "png/maximize.png" ToggleMaximize
+closeC = StandardWidget "png/close.png" "png/close.png" CloseWindow
+dwmpromoteC = StandardWidget "png/demote.png" "png/promote.png" DwmPromote
+moveToNextGroupC = StandardWidget "" "png/right.png" MoveToNextGroup
+moveToPrevGroupC = StandardWidget "" "png/left.png" MoveToPrevGroup
 
