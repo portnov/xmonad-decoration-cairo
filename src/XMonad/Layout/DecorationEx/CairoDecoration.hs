@@ -14,9 +14,12 @@ import Control.Concurrent
 import Data.Word
 import Data.Bits
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Numeric (readHex)
 import GI.Cairo.Render as Cairo
 import qualified GI.Cairo.Render.Internal as Internal
+import qualified GI.Cairo.Render.Connector as Connector
+import qualified GI.Rsvg as Rsvg
 import System.FilePath
 
 import XMonad
@@ -429,10 +432,30 @@ getImageSurface var path = do
     case M.lookup path cache of
       Just surface -> return (cache, surface)
       Nothing -> do
-        surface <- imageSurfaceCreateFromPNG path
+        surface <- loadImageSurface path
         let cache' = M.insert path surface cache
         return (cache', surface)
-      
+
+loadImageSurface :: FilePath -> IO Surface
+loadImageSurface path =
+  case map toLower (takeExtension path) of
+    ".png" -> imageSurfaceCreateFromPNG path
+    ".svg" -> do
+      Just svgHandle <- Rsvg.handleNewFromFile (T.pack path)
+      w <- Rsvg.getHandleWidth svgHandle
+      h <- Rsvg.getHandleHeight svgHandle
+      surface <- createImageSurface FormatARGB32 (fi w) (fi h)
+      renderWith surface $ do
+        ctx <- Connector.getContext
+        rect <- Rsvg.newZeroRectangle
+        Rsvg.setRectangleX rect 0
+        Rsvg.setRectangleY rect 0
+        Rsvg.setRectangleWidth rect (fi w)
+        Rsvg.setRectangleHeight rect (fi h)
+        Rsvg.handleRenderDocument svgHandle ctx rect
+      return surface
+    _ -> createImageSurface FormatARGB32 32 32
+
 cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration DefaultGeometry shrinker) l Window
 cairoDecoration s theme = decorationEx s theme CairoDecoration DefaultGeometry
@@ -445,11 +468,11 @@ cairoDwmDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidg
              -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
 cairoDwmDecoration s theme = decorationEx s theme CairoDecoration (DwmGeometry True)
 
-toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
-minimizeC = StandardWidget "minimize.png" "minimize.png" Minimize
-maximizeC = StandardWidget "maximize.png" "maximize.png" ToggleMaximize
-closeC = StandardWidget "close.png" "close.png" CloseWindow
-dwmpromoteC = StandardWidget "demote.png" "promote.png" DwmPromote
-moveToNextGroupC = StandardWidget "" "right.png" MoveToNextGroup
-moveToPrevGroupC = StandardWidget "" "left.png" MoveToPrevGroup
+toggleStickyC = StandardWidget "sticky.svg" "sticky.svg" ToggleSticky
+minimizeC = StandardWidget "minimize.svg" "minimize.svg" Minimize
+maximizeC = StandardWidget "maximize.svg" "maximize.svg" ToggleMaximize
+closeC = StandardWidget "close.svg" "close.svg" CloseWindow
+dwmpromoteC = StandardWidget "demote.svg" "promote.svg" DwmPromote
+moveToNextGroupC = StandardWidget "" "right.svg" MoveToNextGroup
+moveToPrevGroupC = StandardWidget "" "left.svg" MoveToPrevGroup
 

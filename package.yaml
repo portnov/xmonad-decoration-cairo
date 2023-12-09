@@ -15,15 +15,18 @@ extra-source-files:
 dependencies:
   - base >= 4.7 && < 5
   - containers >= 0.6
+  - filepath
+  - data-default
+  - text
   - X11
+  - unix >= 2.7.3
   - xmonad >= 0.17
   - xmonad-contrib >= 0.17
   - xmonad-decoration-ex
-  - data-default
-  - unix >= 2.7.3
   - gi-cairo
   - gi-cairo-render
-  - filepath
+  - gi-cairo-connector
+  - gi-rsvg
 
 ghc-options:
   - -Wunused-imports
