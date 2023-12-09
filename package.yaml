@@ -22,7 +22,7 @@ dependencies:
   - data-default
   - unix >= 2.7.3
   - gi-cairo
-  - cairo
+  - gi-cairo-render
   - filepath
 
 ghc-options:

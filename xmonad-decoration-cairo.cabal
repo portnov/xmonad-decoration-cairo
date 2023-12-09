@@ -32,11 +32,11 @@ library
   build-depends:
       X11
     , base >=4.7 && <5
-    , cairo
     , containers >=0.6
     , data-default
     , filepath
     , gi-cairo
+    , gi-cairo-render
     , unix >=2.7.3
     , xmonad >=0.17
     , xmonad-contrib >=0.17

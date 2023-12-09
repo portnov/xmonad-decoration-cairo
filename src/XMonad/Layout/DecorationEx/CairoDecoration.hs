@@ -15,8 +15,8 @@ import Data.Word
 import Data.Bits
 import qualified Data.Map as M
 import Numeric (readHex)
-import Graphics.Rendering.Cairo as Cairo
-import qualified Graphics.Rendering.Cairo.Internal as Internal
+import GI.Cairo.Render as Cairo
+import qualified GI.Cairo.Render.Internal as Internal
 import System.FilePath
 
 import XMonad
@@ -76,14 +76,30 @@ data GradientType = Vertical | Horizontal
 
 type GradientStops = [(Double, String)]
 
-data Background =
-    Flat String
-  | Gradient GradientType GradientStops
+data ImageUsage = TileImage | ScaleImage
   deriving (Eq, Show, Read)
 
+data Fill =
+    Flat String
+  | Gradient GradientType GradientStops
+  | Image ImageUsage FilePath
+  deriving (Eq, Show, Read)
+
+data CentralPanelBackground = CentralPanelBackground {
+    cpPadForWidgets :: Bool
+  , cpLeftImage :: Maybe FilePath
+  , cpMiddle :: Maybe Fill
+  , cpRightImage :: Maybe FilePath
+  }
+  deriving (Eq, Show, Read)
+
+instance Default CentralPanelBackground where
+  def = CentralPanelBackground True Nothing Nothing Nothing
+
 data CairoStyle = CairoStyle {
-    csBackground :: Background
-  , csBorderColor :: String
+    csBackground :: Fill
+  , csWidgetsBackground :: (Maybe Fill, Maybe Fill, Maybe Fill)
+  , csCentralPanelBackground :: CentralPanelBackground
   , csTextColor :: String
   , csDecoBorderWidth :: Dimension
   , csDecorationBorders :: BorderColors
@@ -102,9 +118,9 @@ stripesGradient nStops color1 color2 =
 themeC :: D.Theme -> CairoTheme widget
 themeC t =
     CairoTheme {
-          ctActive = CairoStyle (Flat $ D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t) (borderColor $ D.activeColor t)
-        , ctInactive = CairoStyle (Flat $ D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) (borderColor $ D.inactiveColor t)
-        , ctUrgent = CairoStyle (Flat $ D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t) (borderColor $ D.urgentColor t)
+          ctActive = style (D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t)
+        , ctInactive = style (D.inactiveColor t) (D.inactiveBorderColor t) (D.inactiveTextColor t) (D.inactiveBorderWidth t) 
+        , ctUrgent = style (D.urgentColor t) (D.urgentBorderColor t) (D.urgentTextColor t) (D.urgentBorderWidth t)
         , ctPadding = BoxBorders 0 4 0 4
         , ctFontName = D.fontName t
         , ctFontSize = 12
@@ -116,6 +132,16 @@ themeC t =
         , ctWidgetsLeft = []
         , ctWidgetsCenter = []
         , ctWidgetsRight = []
+      }
+  where
+    style bgColor brdColor textColor borderWidth =
+      CairoStyle {
+        csBackground = Flat bgColor,
+        csWidgetsBackground = (Nothing, Nothing, Nothing),
+        csCentralPanelBackground = def,
+        csTextColor = textColor,
+        csDecoBorderWidth = borderWidth,
+        csDecorationBorders = borderColor brdColor
       }
 
 instance ClickHandler CairoTheme StandardWidget where
@@ -143,7 +169,7 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
 
 type ImagesCache = M.Map String Surface
 
-data CairoDecoStyleState = CairoDecoStyleState {
+data CairoEngineState = CairoEngineState {
     cdssFontName :: String
   , cdssFontSize :: Int
   , cdssIconsPath :: FilePath
@@ -154,13 +180,13 @@ instance DecorationEngine CairoDecoration Window where
   type Theme CairoDecoration = CairoTheme
   type Widget CairoDecoration = StandardWidget
   type DecorationPaintingContext CairoDecoration = Surface
-  type DecorationEngineState CairoDecoration = CairoDecoStyleState
+  type DecorationEngineState CairoDecoration = CairoEngineState
 
   describeEngine _ = "CairoDecoration"
 
   initializeState _ _ theme = do
     var <- io $ newMVar M.empty
-    return $ CairoDecoStyleState {
+    return $ CairoEngineState {
       cdssFontName = ctFontName theme,
       cdssFontSize = ctFontSize theme,
       cdssIconsPath = ctIconsPath theme,
@@ -190,7 +216,8 @@ instance DecorationEngine CairoDecoration Window where
 
   paintDecoration dstyle win windowWidth windowHeight shrinker dd = do
       dpy <- asks display
-      let widgets = widgetLayout $ ddLabels dd
+      let widgets = ddLabels dd
+          allWidgets = widgetLayout widgets
           style = ddStyle dd
           borders = csDecorationBorders style
           borderWidth = fi $ csDecoBorderWidth style
@@ -199,13 +226,39 @@ instance DecorationEngine CairoDecoration Window where
           widthD = fi windowWidth :: Double
           heightD = fi windowHeight :: Double
       surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
+
+      paintBackground surface dd (csBackground style) 0 0 widthD heightD
+
+      let (mbLeftBg, mbCenterBg, mbRightBg) = csWidgetsBackground style
+      leftPad <- case mbLeftBg of
+        Just leftBg -> do
+          let leftRect = joinPlaces (wlLeft $ ddWidgetPlaces dd)
+          paintBackground surface dd leftBg (fi $ rect_x leftRect) (fi $ rect_y leftRect)
+                                            (fi $ rect_width leftRect) (fi $ rect_height leftRect)
+          return $ rect_width leftRect
+        Nothing -> return 0
+
+      whenJust mbCenterBg $ \centerBg -> do
+        let centerRect = joinPlaces (wlCenter $ ddWidgetPlaces dd)
+        paintBackground surface dd centerBg (fi $ rect_x centerRect) (fi $ rect_y centerRect)
+                                          (fi $ rect_width centerRect) (fi $ rect_height centerRect)
+      rightPad <- case mbRightBg of
+        Just rightBg -> do
+          let rightRect = joinPlaces (wlRight $ ddWidgetPlaces dd)
+          paintBackground surface dd rightBg (fi $ rect_x rightRect) (fi $ rect_y rightRect)
+                                            (fi $ rect_width rightRect) (fi $ rect_height rightRect)
+          return $ rect_width rightRect
+        Nothing -> return 0
+
+      paintCentralPanel surface dd (csCentralPanelBackground style) leftPad rightPad
+
       io $ renderWith surface $ do
-        paintBackground (csBackground style) widthD heightD
-        drawLineWith 0 0 widthD borderWidth (bxTop borders)
-        drawLineWith 0 0 borderWidth widthD (bxLeft borders)
-        drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
-        drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
-      forM_ (zip widgets $ ddWidgetPlaces dd) $ \(widget, place) ->
+        when (borderWidth > 0) $ do
+          drawLineWith 0 0 widthD borderWidth (bxTop borders)
+          drawLineWith 0 0 borderWidth widthD (bxLeft borders)
+          drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
+          drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
+      forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
         paintWidget dstyle surface place shrinker dd widget
       io $ Internal.surfaceDestroy surface
     where
@@ -214,6 +267,13 @@ instance DecorationEngine CairoDecoration Window where
         setSourceRGB r g b
         rectangle x y w h
         fill
+
+      joinPlaces places =
+        let x0 = minimum $ map (rect_x . wpRectangle) places
+            y0 = minimum $ map (rect_y . wpRectangle) places
+            w = sum $ map (rect_width . wpRectangle) places
+            h = maximum $ map (rect_height . wpRectangle) places
+        in  Rectangle x0 y0 w h
 
   calcWidgetPlace dstyle dd widget = do
     let decoRect = ddDecoRect dd
@@ -267,24 +327,87 @@ instance DecorationEngine CairoDecoration Window where
           rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
           fill
 
-paintBackground :: Background -> Double -> Double -> Render ()
-paintBackground (Flat bgColor) width height = do
+paintBackground :: Surface -> DrawData CairoDecoration -> Fill -> Double -> Double -> Double -> Double -> X ()
+paintBackground surface _ (Flat bgColor) x y width height = io $ renderWith surface $ do
   let (bgR, bgG, bgB) = stringToColor bgColor
   setSourceRGB bgR bgG bgB
-  rectangle 0 0 width height
+  rectangle x y width height
   fill
-paintBackground (Gradient gradType stops) width height = do
+paintBackground surface _ (Gradient gradType stops) x y width height = io $ renderWith surface $ do
   let (x0, y0, x1, y1) =
         case gradType of
-          Vertical -> (0, 0, 0, height)
-          Horizontal -> (0, 0, width, 0)
+          Vertical -> (0, y, 0, height)
+          Horizontal -> (x, 0, width, 0)
   withLinearPattern x0 y0 x1 y1 $ \pattern -> do
     forM_ stops $ \(offset, color) -> do
       let (r,g,b) = stringToColor color
       patternAddColorStopRGB pattern offset r g b
     setSource pattern
-    rectangle 0 0 width height
+    rectangle x y width height
     fill
+paintBackground surface dd (Image usage imageName) x y width height = do
+  image <- getImageSurface' dd imageName
+  io $ renderWith surface $ do
+    case usage of
+      TileImage -> do
+        withPatternForSurface image $ \pattern -> do
+          patternSetExtend pattern ExtendRepeat
+          setSource pattern
+          rectangle x y width height
+          fill
+      ScaleImage -> do
+        imgWidth <- io $ imageSurfaceGetWidth image
+        imgHeight <- io $ imageSurfaceGetHeight image
+        let scaleX = width / fi imgWidth
+            scaleY = height / fi imgHeight
+        translate x y
+        scale scaleX scaleY
+        setSourceSurface image 0 0
+        rectangle 0 0 (fi imgWidth) (fi imgHeight)
+        fill
+        identityMatrix
+
+paintImage :: Surface -> DrawData CairoDecoration -> FilePath -> Position -> Position -> Bool -> X (Int, Int)
+paintImage surface dd imageName x y alignRight = do
+  image <- getImageSurface' dd imageName
+  imgWidth <- io $ imageSurfaceGetWidth image
+  imgHeight <- io $ imageSurfaceGetHeight image
+  let x' = if alignRight
+             then x - fi imgWidth
+             else x
+  renderWith surface $ do
+    setSourceSurface image (fi x') (fi y)
+    rectangle (fi x') (fi y) (fi imgWidth) (fi imgHeight)
+    fill
+  return (imgWidth, imgHeight)
+
+paintCentralPanel :: Surface -> DrawData CairoDecoration -> CentralPanelBackground -> Dimension -> Dimension -> X ()
+paintCentralPanel surface dd bg leftPad rightPad = do
+    let rect = if cpPadForWidgets bg
+                 then padW False leftPad rightPad (ddDecoRect dd)
+                 else ddDecoRect dd
+    leftPad' <-
+      case cpLeftImage bg of
+        Just imageName -> do
+          sz <- paintImage surface dd imageName (rect_x rect) 0 False
+          return $ snd sz
+        Nothing -> return 0
+    rightPad' <-
+      case cpRightImage bg of
+        Just imageName -> do
+          sz <- paintImage surface dd imageName (rect_x rect + fi (rect_width rect)) 0 True
+          return $ snd sz
+        Nothing -> return 0
+
+    whenJust (cpMiddle bg) $ \middle -> do
+      let rect' = padW True (fi leftPad') (fi rightPad') rect
+      paintBackground surface dd middle (fi $ rect_x rect') 0
+                                        (fi $ rect_width rect') (fi $ rect_height rect')
+  where
+    padW keepX left right (Rectangle x y w h) =
+      let x' = if keepX then  x + fi left else fi left
+          w' = w - left - right
+      in  Rectangle x' y w' h
 
 getWidgetImage :: DrawData CairoDecoration -> StandardWidget -> X (Either String Surface)
 getWidgetImage dd TitleWidget = return $ Left $ ddWindowTitle dd
@@ -293,8 +416,12 @@ getWidgetImage dd widget = do
   let imageName = if checked
                     then swCheckedText widget
                     else swUncheckedText widget
+  Right <$> getImageSurface' dd imageName
+
+getImageSurface' :: DrawData CairoDecoration -> String -> X Surface
+getImageSurface' dd imageName = do
   let path = cdssIconsPath (ddStyleState dd) </> imageName
-  Right <$> getImageSurface (cdssImages $ ddStyleState dd) path
+  getImageSurface (cdssImages $ ddStyleState dd) path
 
 getImageSurface :: MVar ImagesCache -> String -> X Surface
 getImageSurface var path = do
