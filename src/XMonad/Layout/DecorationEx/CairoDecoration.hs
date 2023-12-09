@@ -13,6 +13,7 @@ module XMonad.Layout.DecorationEx.CairoDecoration (
     Fill (..),
     CentralPanelBackground (..),
     GradientStops (..), GradientType (..),
+    FontWeight (..), FontSlant (..),
     CairoStyle (..),
     CairoTheme (..),
     CairoDecoration (..),
@@ -48,6 +49,9 @@ import XMonad.Layout.DecorationEx
 
 import Graphics.X11.Cairo.CairoSurface
 
+deriving instance Read FontWeight
+deriving instance Read FontSlant
+
 type CairoColor = (Double, Double, Double)
 
 parseHex :: String -> Word32
@@ -71,6 +75,8 @@ data CairoTheme widget = CairoTheme {
   , ctPadding :: BoxBorders Dimension
   , ctFontName :: String
   , ctFontSize :: Int
+  , ctFontWeight :: FontWeight
+  , ctFontSlant :: FontSlant
   , ctDecoWidth :: Dimension
   , ctDecoHeight :: Dimension
   , ctOnDecoClick :: M.Map Int (WidgetCommand widget)
@@ -143,6 +149,8 @@ themeC t =
         , ctPadding = BoxBorders 0 4 0 4
         , ctFontName = D.fontName t
         , ctFontSize = 12
+        , ctFontWeight = FontWeightNormal
+        , ctFontSlant = FontSlantNormal
         , ctDecoWidth = D.decoWidth t
         , ctDecoHeight = D.decoHeight t
         , ctOnDecoClick = M.empty
@@ -191,6 +199,8 @@ type ImagesCache = M.Map String Surface
 data CairoEngineState = CairoEngineState {
     cdssFontName :: String
   , cdssFontSize :: Int
+  , cdssFontWeight :: FontWeight
+  , cdssFontSlant :: FontSlant
   , cdssIconsPath :: FilePath
   , cdssImages :: MVar ImagesCache
   }
@@ -208,6 +218,8 @@ instance DecorationEngine CairoDecoration Window where
     return $ CairoEngineState {
       cdssFontName = ctFontName theme,
       cdssFontSize = ctFontSize theme,
+      cdssFontWeight = ctFontWeight theme,
+      cdssFontSlant = ctFontSlant theme,
       cdssIconsPath = ctIconsPath theme,
       cdssImages = var
     }
@@ -224,7 +236,7 @@ instance DecorationEngine CairoDecoration Window where
           io $ withImageSurface FormatARGB32 (fi wh) (fi ht) $ \surface ->
             renderWith surface $ do
               setFontSize (fi $ cdssFontSize st)
-              selectFontFace (cdssFontName st) FontSlantNormal FontWeightNormal
+              selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
               ext <- Cairo.textExtents text
               return $ round $ textExtentsWidth ext
     let s = shrinkIt shrinker
@@ -305,8 +317,9 @@ instance DecorationEngine CairoDecoration Window where
       Left str -> do
         io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
           renderWith surface $ do
-            setFontSize (fi $ cdssFontSize $ ddStyleState dd)
-            selectFontFace (cdssFontName $ ddStyleState dd) FontSlantNormal FontWeightNormal
+            let st = ddStyleState dd
+            setFontSize (fi $ cdssFontSize st)
+            selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
             ext <- Cairo.textExtents str
             let textWidth = textExtentsWidth ext
                 textHeight = textExtentsHeight ext
@@ -323,6 +336,7 @@ instance DecorationEngine CairoDecoration Window where
   paintWidget engine surface place shrinker dd widget = do
     dpy <- asks display
     let style = ddStyle dd
+        st = ddStyleState dd
         rect = wpRectangle place
         decoRect = ddDecoRect dd
         decoWidth = fi $ rect_width decoRect
@@ -334,12 +348,12 @@ instance DecorationEngine CairoDecoration Window where
         let x = rect_x rect
             y = wpTextYPosition place
         str' <- if isShrinkable widget
-                  then getShrinkedWindowName engine shrinker (ddStyleState dd) str (rect_width rect) (rect_height rect) 
+                  then getShrinkedWindowName engine shrinker st str (rect_width rect) (rect_height rect) 
                   else return str
         renderWith surface $ do
           setSourceRGB textR textG textB
-          setFontSize (fi $ cdssFontSize $ ddStyleState dd)
-          selectFontFace (cdssFontName $ ddStyleState dd) FontSlantNormal FontWeightNormal
+          setFontSize (fi $ cdssFontSize st)
+          selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
           moveTo (fi x) (fi y)
           showText str'
       Right image -> do
