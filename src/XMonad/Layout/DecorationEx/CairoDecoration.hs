@@ -388,7 +388,7 @@ paintCentralPanel :: Surface -> DrawData CairoDecoration -> CentralPanelBackgrou
 paintCentralPanel surface dd bg leftPad rightPad = do
     let rect = if cpPadForWidgets bg
                  then padW False leftPad rightPad (ddDecoRect dd)
-                 else ddDecoRect dd
+                 else (ddDecoRect dd) {rect_x = 0, rect_y = 0}
     leftPad' <-
       case cpLeftImage bg of
         Just imageName -> do
