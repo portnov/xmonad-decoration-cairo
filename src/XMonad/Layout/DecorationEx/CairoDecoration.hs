@@ -35,7 +35,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Numeric (readHex)
 import Graphics.Rendering.Cairo as Cairo
-import qualified Graphics.Rendering.Cairo.Internal as Internal
+-- import qualified Graphics.Rendering.Cairo.Internal as Internal
 -- import qualified GI.Cairo.Render.Connector as Connector
 -- import qualified GI.Rsvg as Rsvg
 import System.FilePath
@@ -240,7 +240,7 @@ instance DecorationEngine CairoDecoration Window where
     cache <- getImagesCache
     forM_ (M.elems cache) $ \surface -> do
       io $ surfaceFinish surface
-      io $ Internal.surfaceDestroy surface
+      -- io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName dstyle shrinker st name wh ht = do
     let calcWidth text =
@@ -304,7 +304,7 @@ instance DecorationEngine CairoDecoration Window where
       forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
         paintWidget dstyle surface place shrinker dd widget
       io $ surfaceFinish surface
-      io $ Internal.surfaceDestroy surface
+      -- io $ Internal.surfaceDestroy surface
     where
       drawLineWith x y w h color = do
         let (r,g,b) = stringToColor color
