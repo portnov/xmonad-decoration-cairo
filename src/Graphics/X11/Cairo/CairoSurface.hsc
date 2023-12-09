@@ -20,8 +20,8 @@ module Graphics.X11.Cairo.CairoSurface (createXlibSurface) where
 
 import Graphics.X11.Xlib.Types
 import Graphics.X11.Types
-import GI.Cairo.Render
-import qualified GI.Cairo.Render.Internal as Internal
+import Graphics.Rendering.Cairo
+import qualified Graphics.Rendering.Cairo.Internal as Internal
 
 import Foreign
 import Foreign.C

@@ -23,10 +23,11 @@ dependencies:
   - xmonad >= 0.17
   - xmonad-contrib >= 0.17
   - xmonad-decoration-ex
-  - gi-cairo
-  - gi-cairo-render
-  - gi-cairo-connector
-  - gi-rsvg
+  - cairo
+    #- gi-cairo
+    #- gi-cairo-render
+    #- gi-cairo-connector
+    #- gi-rsvg
 
 ghc-options:
   - -Wunused-imports

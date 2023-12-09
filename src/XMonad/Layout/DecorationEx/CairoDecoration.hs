@@ -34,10 +34,10 @@ import Data.Bits
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Numeric (readHex)
-import GI.Cairo.Render as Cairo
-import qualified GI.Cairo.Render.Internal as Internal
-import qualified GI.Cairo.Render.Connector as Connector
-import qualified GI.Rsvg as Rsvg
+import Graphics.Rendering.Cairo as Cairo
+import qualified Graphics.Rendering.Cairo.Internal as Internal
+-- import qualified GI.Cairo.Render.Connector as Connector
+-- import qualified GI.Rsvg as Rsvg
 import System.FilePath
 
 import XMonad
@@ -488,6 +488,7 @@ loadImageSurface path =
     ".png" -> do
       putStrLn $ "Loading PNG: " ++ path
       imageSurfaceCreateFromPNG path
+    {-
     ".svg" -> do
       Just svgHandle <- Rsvg.handleNewFromFile (T.pack path)
       putStrLn $ "Loading SVG: " ++ path
@@ -503,6 +504,7 @@ loadImageSurface path =
         Rsvg.setRectangleHeight rect (fi h)
         Rsvg.handleRenderDocument svgHandle ctx rect
       return surface
+      -}
     _ -> createImageSurface FormatARGB32 32 32
 
 cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
