@@ -200,7 +200,8 @@ instance DecorationEngine CairoDecoration Window where
     mbCache <- io $ tryTakeMVar (cdssImages st)
     whenJust mbCache $ \cache ->
       forM_ (M.elems cache) $ \surface ->
-        io $ Internal.surfaceDestroy surface
+        io $ surfaceFinish surface
+        -- io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName dstyle shrinker st name wh ht = do
     let calcWidth text =
@@ -263,7 +264,8 @@ instance DecorationEngine CairoDecoration Window where
           drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
       forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
         paintWidget dstyle surface place shrinker dd widget
-      io $ Internal.surfaceDestroy surface
+      io $ surfaceFinish surface
+      -- io $ Internal.surfaceDestroy surface
     where
       drawLineWith x y w h color = do
         let (r,g,b) = stringToColor color
