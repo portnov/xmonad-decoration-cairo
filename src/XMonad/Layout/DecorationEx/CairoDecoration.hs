@@ -248,7 +248,7 @@ instance DecorationEngine CairoDecoration Window where
     XS.put $ CairoDecorationCache M.empty M.empty
       -- io $ Internal.surfaceDestroy surface
 
-  getShrinkedWindowName dstyle shrinker st name wh ht = do
+  getShrinkedWindowName engine shrinker st name wh ht = do
     let calcWidth text =
           io $ withImageSurface FormatARGB32 (fi wh) (fi ht) $ \surface ->
             renderWith surface $ do
@@ -263,12 +263,12 @@ instance DecorationEngine CairoDecoration Window where
 
   placeWidgets = defaultPlaceWidgets
 
-  paintDecoration dstyle win windowWidth windowHeight shrinker dd isExpose = do
+  paintDecoration engine win windowWidth windowHeight shrinker dd isExpose = do
       dpy <- asks display
       let scr = defaultScreenOfDisplay dpy
           visual = defaultVisualOfScreen scr
       buffer <- io $ createImageSurface FormatARGB32 (fi windowWidth) (fi windowHeight)
-      paintDecorationImpl buffer dstyle win windowWidth windowHeight shrinker dd isExpose
+      paintDecorationImpl buffer engine win windowWidth windowHeight shrinker dd isExpose
       surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
       renderWith surface $ do
         setSourceSurface buffer 0 0
@@ -278,7 +278,7 @@ instance DecorationEngine CairoDecoration Window where
       io $ surfaceFinish surface
       -- io $ Internal.surfaceDestroy surface
 
-  calcWidgetPlace dstyle dd widget = do
+  calcWidgetPlace engine dd widget = do
     let decoRect = ddDecoRect dd
         decoWidth = fi $ rect_width decoRect
         decoHeight = fi $ rect_height decoRect
@@ -342,7 +342,7 @@ paintDecorationImpl :: Shrinker shrinker
                     -> DrawData CairoDecoration
                     -> Bool
                     -> X ()
-paintDecorationImpl surface dstyle win windowWidth windowHeight shrinker dd isExpose = do
+paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isExpose = do
       let widgets = ddWidgets dd
           allWidgets = widgetLayout widgets
           style = ddStyle dd
@@ -382,7 +382,7 @@ paintDecorationImpl surface dstyle win windowWidth windowHeight shrinker dd isEx
           drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
           drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
       forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
-        paintWidget dstyle surface place shrinker dd widget isExpose
+        paintWidget engine surface place shrinker dd widget isExpose
     where
       drawLineWith x y w h color = do
         let (r,g,b) = stringToColor color
