@@ -195,18 +195,21 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
   widgetsPadding = ctPadding
   themeFontName = ctFontName
 
-type ImagesData = M.Map String Surface
+type IconSurfaces = M.Map String Surface
 
-newtype ImagesCache = ImagesCache ImagesData
+data CairoDecorationCache = CairoDecorationCache {
+      cdcIcons :: IconSurfaces
+    , cdcDecorations :: M.Map (Window, Dimension, Dimension) Surface
+  }
   deriving Typeable
 
-instance ExtensionClass ImagesCache where
-  initialValue = ImagesCache M.empty
+instance ExtensionClass CairoDecorationCache where
+  initialValue = CairoDecorationCache M.empty M.empty
 
-getImagesCache :: X ImagesData
+getImagesCache :: X IconSurfaces
 getImagesCache = do
-  ImagesCache cache <- XS.get
-  return cache
+  cache <- XS.get
+  return $ cdcIcons cache
 
 data CairoEngineState = CairoEngineState {
     cdssFontName :: String
@@ -226,7 +229,7 @@ instance DecorationEngine CairoDecoration Window where
 
   initializeState _ _ theme = do
     -- cache <- getImagesCache
-    XS.put $ ImagesCache M.empty
+    XS.put $ CairoDecorationCache M.empty M.empty
     return $ CairoEngineState {
       cdssFontName = ctFontName theme,
       cdssFontSize = ctFontSize theme,
@@ -236,12 +239,14 @@ instance DecorationEngine CairoDecoration Window where
     }
 
   releaseStateResources _ st = do
-    cache <- getImagesCache
-    forM_ (M.assocs cache) $ \(path, surface) -> do
+    cache <- XS.get
+    forM_ (M.assocs $ cdcIcons cache) $ \(path, surface) -> do
       st <- renderWith surface status
       when (st == StatusSuccess) $ do
         io $ surfaceFinish surface
-    XS.put $ ImagesCache M.empty
+    forM_ (M.elems $ cdcDecorations cache) $ \surface -> do
+        io $ surfaceFinish surface
+    XS.put $ CairoDecorationCache M.empty M.empty
       -- io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName dstyle shrinker st name wh ht = do
@@ -259,19 +264,93 @@ instance DecorationEngine CairoDecoration Window where
 
   placeWidgets = defaultPlaceWidgets
 
-  paintDecoration dstyle win windowWidth windowHeight shrinker dd = do
+  paintDecoration dstyle win windowWidth windowHeight shrinker dd isExpose = do
       dpy <- asks display
+      let scr = defaultScreenOfDisplay dpy
+          visual = defaultVisualOfScreen scr
+      buffer <- io $ createImageSurface FormatARGB32 (fi windowWidth) (fi windowHeight)
+      paintDecorationImpl buffer dstyle win windowWidth windowHeight shrinker dd isExpose
+      surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
+      renderWith surface $ do
+        setSourceSurface buffer 0 0
+        rectangle 0 0 (fi windowWidth) (fi windowHeight)
+        fill
+      io $ surfaceFinish buffer
+      io $ surfaceFinish surface
+      -- io $ Internal.surfaceDestroy surface
+
+  calcWidgetPlace dstyle dd widget = do
+    let decoRect = ddDecoRect dd
+        decoWidth = fi $ rect_width decoRect
+        decoHeight = fi $ rect_height decoRect
+    res <- getWidgetImage dd widget
+    case res of
+      Left str -> do
+        io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
+          renderWith surface $ do
+            let st = ddStyleState dd
+            setFontSize (fi $ cdssFontSize st)
+            selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
+            ext <- Cairo.textExtents str
+            let textWidth = textExtentsWidth ext
+                textHeight = textExtentsHeight ext
+                y = (fi decoHeight - textHeight) / 2.0
+                y0 = round $ y - textExtentsYbearing ext
+                rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
+            return $ WidgetPlace y0 rect
+      Right image -> do
+        imgWidth <- io $ imageSurfaceGetWidth image
+        imgHeight <- io $ imageSurfaceGetHeight image
+        let width' = (fi imgWidth / fi imgHeight) * fi decoHeight
+        return $ WidgetPlace 0 $ Rectangle 0 0 (round width') (fi decoHeight)
+
+  paintWidget engine surface place shrinker dd widget isExpose = do
+    dpy <- asks display
+    let style = ddStyle dd
+        st = ddStyleState dd
+        rect = wpRectangle place
+        decoRect = ddDecoRect dd
+        decoWidth = fi $ rect_width decoRect
+        decoHeight = fi $ rect_height decoRect
+        (textR, textG, textB) = stringToColor (csTextColor style)
+    res <- getWidgetImage dd widget 
+    case res of
+      Left str -> do
+        let x = rect_x rect
+            y = wpTextYPosition place
+        str' <- if isShrinkable widget
+                  then getShrinkedWindowName engine shrinker st str (rect_width rect) (rect_height rect) 
+                  else return str
+        io $ renderWith surface $ do
+          setSourceRGB textR textG textB
+          setFontSize (fi $ cdssFontSize st)
+          selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
+          moveTo (fi x) (fi y)
+          showText str'
+      Right image -> do
+        io $ renderWith surface $ do
+          setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
+          rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
+          fill
+
+paintDecorationImpl :: Shrinker shrinker
+                    => Surface 
+                    -> CairoDecoration Window
+                    -> Window
+                    -> Dimension
+                    -> Dimension
+                    -> shrinker
+                    -> DrawData CairoDecoration
+                    -> Bool
+                    -> X ()
+paintDecorationImpl surface dstyle win windowWidth windowHeight shrinker dd isExpose = do
       let widgets = ddLabels dd
           allWidgets = widgetLayout widgets
           style = ddStyle dd
           borders = csDecorationBorders style
           borderWidth = fi $ csDecoBorderWidth style
-          scr = defaultScreenOfDisplay dpy
-          visual = defaultVisualOfScreen scr
           widthD = fi windowWidth :: Double
           heightD = fi windowHeight :: Double
-      surface <- io $ createXlibSurface dpy win visual (fi windowWidth) (fi windowHeight)
-
       paintBackground surface dd (csBackground style) 0 0 widthD heightD
 
       let (mbLeftBg, mbCenterBg, mbRightBg) = csWidgetsBackground style
@@ -304,9 +383,7 @@ instance DecorationEngine CairoDecoration Window where
           drawLineWith 0 (heightD - borderWidth) widthD borderWidth (bxBottom borders)
           drawLineWith (widthD - borderWidth) 0 borderWidth heightD (bxRight borders)
       forM_ (zip allWidgets $ widgetLayout $ ddWidgetPlaces dd) $ \(widget, place) ->
-        paintWidget dstyle surface place shrinker dd widget
-      io $ surfaceFinish surface
-      -- io $ Internal.surfaceDestroy surface
+        paintWidget dstyle surface place shrinker dd widget isExpose
     where
       drawLineWith x y w h color = do
         let (r,g,b) = stringToColor color
@@ -320,60 +397,6 @@ instance DecorationEngine CairoDecoration Window where
             w = sum $ map (rect_width . wpRectangle) places
             h = maximum $ map (rect_height . wpRectangle) places
         in  Rectangle x0 y0 w h
-
-  calcWidgetPlace dstyle dd widget = do
-    let decoRect = ddDecoRect dd
-        decoWidth = fi $ rect_width decoRect
-        decoHeight = fi $ rect_height decoRect
-    res <- getWidgetImage dd widget
-    case res of
-      Left str -> do
-        io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
-          renderWith surface $ do
-            let st = ddStyleState dd
-            setFontSize (fi $ cdssFontSize st)
-            selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
-            ext <- Cairo.textExtents str
-            let textWidth = textExtentsWidth ext
-                textHeight = textExtentsHeight ext
-                y = (fi decoHeight - textHeight) / 2.0
-                y0 = round $ y - textExtentsYbearing ext
-                rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
-            return $ WidgetPlace y0 rect
-      Right image -> do
-        imgWidth <- io $ imageSurfaceGetWidth image
-        imgHeight <- io $ imageSurfaceGetHeight image
-        let width' = (fi imgWidth / fi imgHeight) * fi decoHeight
-        return $ WidgetPlace 0 $ Rectangle 0 0 (round width') (fi decoHeight)
-
-  paintWidget engine surface place shrinker dd widget = do
-    dpy <- asks display
-    let style = ddStyle dd
-        st = ddStyleState dd
-        rect = wpRectangle place
-        decoRect = ddDecoRect dd
-        decoWidth = fi $ rect_width decoRect
-        decoHeight = fi $ rect_height decoRect
-        (textR, textG, textB) = stringToColor (csTextColor style)
-    res <- getWidgetImage dd widget 
-    case res of
-      Left str -> do
-        let x = rect_x rect
-            y = wpTextYPosition place
-        str' <- if isShrinkable widget
-                  then getShrinkedWindowName engine shrinker st str (rect_width rect) (rect_height rect) 
-                  else return str
-        io $ renderWith surface $ do
-          setSourceRGB textR textG textB
-          setFontSize (fi $ cdssFontSize st)
-          selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
-          moveTo (fi x) (fi y)
-          showText str'
-      Right image -> do
-        io $ renderWith surface $ do
-          setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
-          rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
-          fill
 
 paintBackground :: Surface -> DrawData CairoDecoration -> Fill -> Double -> Double -> Double -> Double -> X ()
 paintBackground surface _ (Flat bgColor) x y width height = io $ renderWith surface $ do
@@ -473,15 +496,14 @@ getImageSurface' dd imageName = do
 
 getImageSurface :: String -> X Surface
 getImageSurface path = do
-  cache <- getImagesCache
+  cache <- XS.get
+  let icons = cdcIcons cache
   surface <-
-    case M.lookup path cache of
+    case M.lookup path icons of
       Just surface -> return surface
-      Nothing -> do
-        surface <- io $ loadImageSurface path
-        let cache' = M.insert path surface cache
-        return surface
-  XS.put $ ImagesCache $ M.insert path surface cache
+      Nothing -> io $ loadImageSurface path
+  let icons' = M.insert path surface icons
+  XS.put $ cache {cdcIcons = icons'}
   return surface
 
 loadImageSurface :: FilePath -> IO Surface
