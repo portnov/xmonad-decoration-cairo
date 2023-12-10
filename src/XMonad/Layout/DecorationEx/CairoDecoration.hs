@@ -11,7 +11,7 @@
 module XMonad.Layout.DecorationEx.CairoDecoration (
     ImageUsage (..),
     Fill (..),
-    CentralPanelBackground (..),
+    PanelBackground (..),
     GradientStops (..), GradientType (..),
     FontWeight (..), FontSlant (..),
     CairoStyle (..),
@@ -111,21 +111,21 @@ data Fill =
   | Image ImageUsage FilePath
   deriving (Eq, Show, Read)
 
-data CentralPanelBackground = CentralPanelBackground {
-    cpPadForWidgets :: Bool
-  , cpLeftImage :: Maybe FilePath
+data PanelBackground = PanelBackground {
+    cpLeftImage :: Maybe FilePath
   , cpMiddle :: Maybe Fill
   , cpRightImage :: Maybe FilePath
   }
   deriving (Eq, Show, Read)
 
-instance Default CentralPanelBackground where
-  def = CentralPanelBackground True Nothing Nothing Nothing
+instance Default PanelBackground where
+  def = PanelBackground Nothing Nothing Nothing
 
 data CairoStyle = CairoStyle {
     csBackground :: Fill
-  , csWidgetsBackground :: (Maybe Fill, Maybe Fill, Maybe Fill)
-  , csCentralPanelBackground :: CentralPanelBackground
+  , csWidgetsBackground :: (Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
+  , csPadCentralPanelForWidgets :: Bool
+  , csCentralPanelBackground :: PanelBackground
   , csTextColor :: String
   , csDecoBorderWidth :: Dimension
   , csDecorationBorders :: BorderColors
@@ -166,6 +166,7 @@ themeC t =
       CairoStyle {
         csBackground = Flat bgColor,
         csWidgetsBackground = (Nothing, Nothing, Nothing),
+        csPadCentralPanelForWidgets = True,
         csCentralPanelBackground = def,
         csTextColor = textColor,
         csDecoBorderWidth = borderWidth,
@@ -346,34 +347,36 @@ paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isEx
       let widgets = ddWidgets dd
           allWidgets = widgetLayout widgets
           style = ddStyle dd
+          st = ddEngineState dd
           borders = csDecorationBorders style
           borderWidth = fi $ csDecoBorderWidth style
           widthD = fi windowWidth :: Double
           heightD = fi windowHeight :: Double
-      paintBackground surface dd (csBackground style) 0 0 widthD heightD
+      paintBackground surface st (csBackground style) 0 0 widthD heightD
 
       let (mbLeftBg, mbCenterBg, mbRightBg) = csWidgetsBackground style
       leftPad <- case mbLeftBg of
         Just leftBg -> do
           let leftRect = joinPlaces (wlLeft $ ddWidgetPlaces dd)
-          paintBackground surface dd leftBg (fi $ rect_x leftRect) (fi $ rect_y leftRect)
-                                            (fi $ rect_width leftRect) (fi $ rect_height leftRect)
+          when (rect_width leftRect > 0) $
+            paintPanel surface leftRect st leftBg Nothing
           return $ rect_width leftRect
         Nothing -> return 0
 
       whenJust mbCenterBg $ \centerBg -> do
         let centerRect = joinPlaces (wlCenter $ ddWidgetPlaces dd)
-        paintBackground surface dd centerBg (fi $ rect_x centerRect) (fi $ rect_y centerRect)
-                                          (fi $ rect_width centerRect) (fi $ rect_height centerRect)
+        when (rect_width centerRect > 0) $
+          paintPanel surface centerRect st centerBg Nothing
+
       rightPad <- case mbRightBg of
         Just rightBg -> do
           let rightRect = joinPlaces (wlRight $ ddWidgetPlaces dd)
-          paintBackground surface dd rightBg (fi $ rect_x rightRect) (fi $ rect_y rightRect)
-                                            (fi $ rect_width rightRect) (fi $ rect_height rightRect)
+          when (rect_width rightRect > 0) $
+            paintPanel surface rightRect st rightBg Nothing
           return $ rect_width rightRect
         Nothing -> return 0
 
-      paintCentralPanel surface dd (csCentralPanelBackground style) leftPad rightPad
+      paintPanel surface ((ddDecoRect dd) {rect_x = 0, rect_y = 0}) (ddEngineState dd) (csCentralPanelBackground style) $ mkPads style leftPad rightPad
 
       io $ renderWith surface $ do
         when (borderWidth > 0) $ do
@@ -391,13 +394,15 @@ paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isEx
         fill
 
       joinPlaces places =
-        let x0 = minimum $ map (rect_x . wpRectangle) places
-            y0 = minimum $ map (rect_y . wpRectangle) places
+        let x0 = if null places
+                   then 0
+                   else minimum $ map (rect_x . wpRectangle) places
+            y0 = 0
             w = sum $ map (rect_width . wpRectangle) places
-            h = maximum $ map (rect_height . wpRectangle) places
+            h = windowHeight
         in  Rectangle x0 y0 w h
 
-paintBackground :: Surface -> DrawData CairoDecoration -> Fill -> Double -> Double -> Double -> Double -> X ()
+paintBackground :: Surface -> DecorationEngineState CairoDecoration -> Fill -> Double -> Double -> Double -> Double -> X ()
 paintBackground surface _ (Flat bgColor) x y width height = io $ renderWith surface $ do
   let (bgR, bgG, bgB) = stringToColor bgColor
   setSourceRGB bgR bgG bgB
@@ -415,8 +420,8 @@ paintBackground surface _ (Gradient gradType stops) x y width height = io $ rend
     setSource pattern
     rectangle x y width height
     fill
-paintBackground surface dd (Image usage imageName) x y width height = do
-  image <- getImageSurface' dd imageName
+paintBackground surface st (Image usage imageName) x y width height = do
+  image <- getImageSurface' st imageName
   io $ renderWith surface $ do
     case usage of
       TileImage -> do
@@ -437,9 +442,9 @@ paintBackground surface dd (Image usage imageName) x y width height = do
         fill
         identityMatrix
 
-paintImage :: Surface -> DrawData CairoDecoration -> FilePath -> Position -> Position -> Bool -> X (Int, Int)
-paintImage surface dd imageName x y alignRight = do
-  image <- getImageSurface' dd imageName
+paintImage :: Surface -> DecorationEngineState CairoDecoration -> FilePath -> Position -> Position -> Bool -> X (Int, Int)
+paintImage surface st imageName x y alignRight = do
+  image <- getImageSurface' st imageName
   imgWidth <- io $ imageSurfaceGetWidth image
   imgHeight <- io $ imageSurfaceGetHeight image
   let x' = if alignRight
@@ -451,27 +456,33 @@ paintImage surface dd imageName x y alignRight = do
     fill
   return (imgWidth, imgHeight)
 
-paintCentralPanel :: Surface -> DrawData CairoDecoration -> CentralPanelBackground -> Dimension -> Dimension -> X ()
-paintCentralPanel surface dd bg leftPad rightPad = do
-    let rect = if cpPadForWidgets bg
-                 then padW False leftPad rightPad (ddDecoRect dd)
-                 else (ddDecoRect dd) {rect_x = 0, rect_y = 0}
+mkPads :: CairoStyle -> Dimension -> Dimension -> Maybe (Dimension, Dimension)
+mkPads style leftPad rightPad =
+  if csPadCentralPanelForWidgets style
+    then Just (leftPad, rightPad)
+    else Nothing
+
+paintPanel :: Surface -> Rectangle -> DecorationEngineState CairoDecoration -> PanelBackground -> Maybe (Dimension, Dimension) -> X ()
+paintPanel surface panelRect st bg mbPads = do
+    let rect = case mbPads of 
+                 Just (leftPad, rightPad) -> padW True leftPad rightPad panelRect
+                 Nothing -> panelRect
     leftPad' <-
       case cpLeftImage bg of
         Just imageName -> do
-          sz <- paintImage surface dd imageName (rect_x rect) 0 False
-          return $ snd sz
+          sz <- paintImage surface st imageName (rect_x rect) 0 False
+          return $ fst sz
         Nothing -> return 0
     rightPad' <-
       case cpRightImage bg of
         Just imageName -> do
-          sz <- paintImage surface dd imageName (rect_x rect + fi (rect_width rect)) 0 True
-          return $ snd sz
+          sz <- paintImage surface st imageName (rect_x rect + fi (rect_width rect)) 0 True
+          return $ fst sz
         Nothing -> return 0
 
     whenJust (cpMiddle bg) $ \middle -> do
       let rect' = padW True (fi leftPad') (fi rightPad') rect
-      paintBackground surface dd middle (fi $ rect_x rect') 0
+      paintBackground surface st middle (fi $ rect_x rect') (fi $ rect_y rect')
                                         (fi $ rect_width rect') (fi $ rect_height rect')
   where
     padW keepX left right (Rectangle x y w h) =
@@ -486,11 +497,11 @@ getWidgetImage dd widget = do
   let imageName = if checked
                     then swCheckedText widget
                     else swUncheckedText widget
-  Right <$> getImageSurface' dd imageName
+  Right <$> getImageSurface' (ddEngineState dd) imageName
 
-getImageSurface' :: DrawData CairoDecoration -> String -> X Surface
-getImageSurface' dd imageName = do
-  let path = cdssIconsPath (ddEngineState dd) </> imageName
+getImageSurface' :: DecorationEngineState CairoDecoration -> String -> X Surface
+getImageSurface' st imageName = do
+  let path = cdssIconsPath st </> imageName
   getImageSurface path
 
 getImageSurface :: String -> X Surface
