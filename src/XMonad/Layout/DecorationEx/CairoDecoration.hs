@@ -343,7 +343,7 @@ paintDecorationImpl :: Shrinker shrinker
                     -> Bool
                     -> X ()
 paintDecorationImpl surface dstyle win windowWidth windowHeight shrinker dd isExpose = do
-      let widgets = ddLabels dd
+      let widgets = ddWidgets dd
           allWidgets = widgetLayout widgets
           style = ddStyle dd
           borders = csDecorationBorders style
