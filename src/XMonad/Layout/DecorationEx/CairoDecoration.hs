@@ -228,7 +228,6 @@ instance DecorationEngine CairoDecoration Window where
   describeEngine _ = "CairoDecoration"
 
   initializeState _ _ theme = do
-    -- cache <- getImagesCache
     XS.put $ CairoDecorationCache M.empty M.empty
     return $ CairoEngineState {
       cdssFontName = ctFontName theme,
@@ -288,7 +287,7 @@ instance DecorationEngine CairoDecoration Window where
       Left str -> do
         io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
           renderWith surface $ do
-            let st = ddStyleState dd
+            let st = ddEngineState dd
             setFontSize (fi $ cdssFontSize st)
             selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
             ext <- Cairo.textExtents str
@@ -307,7 +306,7 @@ instance DecorationEngine CairoDecoration Window where
   paintWidget engine surface place shrinker dd widget isExpose = do
     dpy <- asks display
     let style = ddStyle dd
-        st = ddStyleState dd
+        st = ddEngineState dd
         rect = wpRectangle place
         decoRect = ddDecoRect dd
         decoWidth = fi $ rect_width decoRect
@@ -491,7 +490,7 @@ getWidgetImage dd widget = do
 
 getImageSurface' :: DrawData CairoDecoration -> String -> X Surface
 getImageSurface' dd imageName = do
-  let path = cdssIconsPath (ddStyleState dd) </> imageName
+  let path = cdssIconsPath (ddEngineState dd) </> imageName
   getImageSurface path
 
 getImageSurface :: String -> X Surface
