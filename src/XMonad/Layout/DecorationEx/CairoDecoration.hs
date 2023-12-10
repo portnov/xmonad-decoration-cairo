@@ -28,11 +28,10 @@ module XMonad.Layout.DecorationEx.CairoDecoration (
     moveToNextGroupC, moveToPrevGroupC
   ) where
 
-import Control.Concurrent
 import Data.Word
 import Data.Bits
 import qualified Data.Map as M
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import Numeric (readHex)
 import Graphics.Rendering.Cairo as Cairo
 -- import qualified Graphics.Rendering.Cairo.Internal as Internal
@@ -238,8 +237,11 @@ instance DecorationEngine CairoDecoration Window where
 
   releaseStateResources _ st = do
     cache <- getImagesCache
-    forM_ (M.elems cache) $ \surface -> do
-      io $ surfaceFinish surface
+    forM_ (M.assocs cache) $ \(path, surface) -> do
+      st <- renderWith surface status
+      when (st == StatusSuccess) $ do
+        io $ surfaceFinish surface
+    XS.put $ ImagesCache M.empty
       -- io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName dstyle shrinker st name wh ht = do
@@ -361,14 +363,14 @@ instance DecorationEngine CairoDecoration Window where
         str' <- if isShrinkable widget
                   then getShrinkedWindowName engine shrinker st str (rect_width rect) (rect_height rect) 
                   else return str
-        renderWith surface $ do
+        io $ renderWith surface $ do
           setSourceRGB textR textG textB
           setFontSize (fi $ cdssFontSize st)
           selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
           moveTo (fi x) (fi y)
           showText str'
       Right image -> do
-        renderWith surface $ do
+        io $ renderWith surface $ do
           setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
           rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
           fill
