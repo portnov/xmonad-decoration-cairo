@@ -141,7 +141,7 @@ stripesGradient nStops color1 color2 =
       colors = take nStops $ cycle [color1, color2]
   in  zip stops colors
 
-themeC :: D.Theme -> CairoTheme widget
+themeC :: D.Theme -> CairoTheme StandardWidget
 themeC t =
     CairoTheme {
           ctActive = style (D.activeColor t) (D.activeBorderColor t) (D.activeTextColor t) (D.activeBorderWidth t)
@@ -154,7 +154,7 @@ themeC t =
         , ctFontSlant = FontSlantNormal
         , ctDecoWidth = D.decoWidth t
         , ctDecoHeight = D.decoHeight t
-        , ctOnDecoClick = M.empty
+        , ctOnDecoClick = M.fromList [(1, FocusWindow)]
         , ctDragWindowButtons = [1]
         , ctIconsPath = "."
         , ctWidgetsLeft = []
