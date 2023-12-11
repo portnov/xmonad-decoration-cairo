@@ -329,9 +329,7 @@ instance DecorationEngine CairoDecoration Window where
           showText str'
       Right image -> do
         io $ renderWith surface $ do
-          setSourceSurface image (fi $ rect_x rect) (fi $ rect_y rect)
-          rectangle (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
-          fill
+          paintImageScaled image (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
 
 paintDecorationImpl :: Shrinker shrinker
                     => Surface 
@@ -431,16 +429,20 @@ paintBackground surface st (Image usage imageName) x y width height = do
           rectangle x y width height
           fill
       ScaleImage -> do
-        imgWidth <- io $ imageSurfaceGetWidth image
-        imgHeight <- io $ imageSurfaceGetHeight image
-        let scaleX = width / fi imgWidth
-            scaleY = height / fi imgHeight
-        translate x y
-        scale scaleX scaleY
-        setSourceSurface image 0 0
-        rectangle 0 0 (fi imgWidth) (fi imgHeight)
-        fill
-        identityMatrix
+        paintImageScaled image x y width height
+
+paintImageScaled :: Surface -> Double -> Double -> Double -> Double -> Render ()
+paintImageScaled image x y width height = do
+  imgWidth <- io $ imageSurfaceGetWidth image
+  imgHeight <- io $ imageSurfaceGetHeight image
+  let scaleX = width / fi imgWidth
+      scaleY = height / fi imgHeight
+  translate x y
+  scale scaleX scaleY
+  setSourceSurface image 0 0
+  rectangle 0 0 (fi imgWidth) (fi imgHeight)
+  fill
+  identityMatrix
 
 paintImage :: Surface -> DecorationEngineState CairoDecoration -> FilePath -> Position -> Position -> Bool -> X (Int, Int)
 paintImage surface st imageName x y alignRight = do
