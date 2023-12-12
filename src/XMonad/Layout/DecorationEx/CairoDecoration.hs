@@ -23,6 +23,7 @@ module XMonad.Layout.DecorationEx.CairoDecoration (
     cairoDecoration,
     cairoTabDecoration,
     cairoDwmDecoration,
+    cairoDwmDecorationEx,
     toggleStickyC, minimizeC, maximizeC,
     closeC, dwmpromoteC,
     moveToNextGroupC, moveToPrevGroupC
@@ -43,7 +44,6 @@ import XMonad
 import XMonad.Prelude
 import XMonad.Layout.Decoration (ModifiedLayout, Shrinker (..))
 import qualified XMonad.Layout.Decoration as D
-import XMonad.Util.Types
 import qualified XMonad.Util.ExtensibleState as XS
 
 import XMonad.Layout.DecorationEx
@@ -78,8 +78,6 @@ data CairoTheme widget = CairoTheme {
   , ctFontSize :: Int
   , ctFontWeight :: FontWeight
   , ctFontSlant :: FontSlant
-  , ctDecoWidth :: Dimension
-  , ctDecoHeight :: Dimension
   , ctOnDecoClick :: M.Map Int (WidgetCommand widget)
   , ctDragWindowButtons :: [Int]
   , ctIconsPath :: FilePath
@@ -152,8 +150,6 @@ themeC t =
         , ctFontSize = 12
         , ctFontWeight = FontWeightNormal
         , ctFontSlant = FontSlantNormal
-        , ctDecoWidth = D.decoWidth t
-        , ctDecoHeight = D.decoHeight t
         , ctOnDecoClick = M.fromList [(1, FocusWindow)]
         , ctDragWindowButtons = [1]
         , ctIconsPath = "."
@@ -176,9 +172,6 @@ themeC t =
 instance ClickHandler CairoTheme StandardWidget where
   onDecorationClick theme button = M.lookup button (ctOnDecoClick theme)
   isDraggingEnabled theme button = button `elem` ctDragWindowButtons theme
-
-instance HasDecorationSize (CairoTheme widget) where
-  decorationSize t = (ctDecoWidth t, ctDecoHeight t)
 
 instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCommand widget),
           Read (CairoTheme widget), Show (CairoTheme widget))
@@ -545,15 +538,19 @@ loadImageSurface path =
 
 cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration DefaultGeometry shrinker) l Window
-cairoDecoration s theme = decorationEx s theme CairoDecoration DefaultGeometry
+cairoDecoration s theme = decorationEx s theme CairoDecoration def
 
 cairoTabDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration TabbedGeometry shrinker) l Window
-cairoTabDecoration s theme = decorationEx s theme CairoDecoration (TabbedGeometry U)
+cairoTabDecoration s theme = decorationEx s theme CairoDecoration def
 
 cairoDwmDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
              -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
-cairoDwmDecoration s theme = decorationEx s theme CairoDecoration (DwmGeometry True)
+cairoDwmDecoration shrinker theme = decorationEx shrinker theme CairoDecoration def
+
+cairoDwmDecorationEx :: (Shrinker shrinker) => shrinker -> DwmGeometry Window -> CairoTheme StandardWidget -> l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
+cairoDwmDecorationEx shrinker geom theme = decorationEx shrinker theme CairoDecoration geom
 
 toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
 minimizeC = StandardWidget "png/minimize.png" "png/minimize.png" Minimize
