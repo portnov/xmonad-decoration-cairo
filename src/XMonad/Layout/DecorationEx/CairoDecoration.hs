@@ -487,7 +487,7 @@ paintPanel surface panelRect st bg mbPads = do
 class DecorationWidget widget => CairoWidget widget where
   getWidgetImage :: DrawData CairoDecoration widget -> widget -> X (Either String Surface)
 
-instance CairoWidget StandardWidget where
+instance DecorationWidget (GenericWidget cmd) => CairoWidget (GenericWidget cmd) where
   getWidgetImage dd TitleWidget = return $ Left $ ddWindowTitle dd
   getWidgetImage dd widget = do
     checked <- isWidgetChecked widget (ddOrigWindow dd)
