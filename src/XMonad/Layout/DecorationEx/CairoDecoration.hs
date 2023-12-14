@@ -92,7 +92,7 @@ deriving instance (Read widget, Read (WidgetCommand widget)) => Read (CairoTheme
 instance HasWidgets CairoTheme widget where
   themeWidgets t = WidgetLayout (ctWidgetsLeft t) (ctWidgetsCenter t) (ctWidgetsRight t)
 
-data CairoDecoration a = CairoDecoration
+data CairoDecoration widget a = CairoDecoration
   deriving (Show, Read)
 
 data GradientType = Vertical | Horizontal
@@ -213,9 +213,8 @@ data CairoEngineState = CairoEngineState {
   , cdssIconsPath :: FilePath
   }
 
-instance DecorationEngine CairoDecoration Window where
+instance (CairoWidget widget, ClickHandler CairoTheme widget) => DecorationEngine CairoDecoration widget Window where
   type Theme CairoDecoration = CairoTheme
-  type Widget CairoDecoration = StandardWidget
   type DecorationPaintingContext CairoDecoration = Surface
   type DecorationEngineState CairoDecoration = CairoEngineState
 
@@ -324,14 +323,14 @@ instance DecorationEngine CairoDecoration Window where
         io $ renderWith surface $ do
           paintImageScaled image (fi $ rect_x rect) (fi $ rect_y rect) (fi $ rect_width rect) (fi $ rect_height rect)
 
-paintDecorationImpl :: Shrinker shrinker
+paintDecorationImpl :: (Shrinker shrinker, CairoWidget widget, ClickHandler CairoTheme widget)
                     => Surface 
-                    -> CairoDecoration Window
+                    -> CairoDecoration widget Window
                     -> Window
                     -> Dimension
                     -> Dimension
                     -> shrinker
-                    -> DrawData CairoDecoration
+                    -> DrawData CairoDecoration widget
                     -> Bool
                     -> X ()
 paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isExpose = do
@@ -485,14 +484,17 @@ paintPanel surface panelRect st bg mbPads = do
           w' = w - left - right
       in  Rectangle x' y w' h
 
-getWidgetImage :: DrawData CairoDecoration -> StandardWidget -> X (Either String Surface)
-getWidgetImage dd TitleWidget = return $ Left $ ddWindowTitle dd
-getWidgetImage dd widget = do
-  checked <- isWidgetChecked widget (ddOrigWindow dd)
-  let imageName = if checked
-                    then swCheckedText widget
-                    else swUncheckedText widget
-  Right <$> getImageSurface' (ddEngineState dd) imageName
+class DecorationWidget widget => CairoWidget widget where
+  getWidgetImage :: DrawData CairoDecoration widget -> widget -> X (Either String Surface)
+
+instance CairoWidget StandardWidget where
+  getWidgetImage dd TitleWidget = return $ Left $ ddWindowTitle dd
+  getWidgetImage dd widget = do
+    checked <- isWidgetChecked widget (ddOrigWindow dd)
+    let imageName = if checked
+                      then swCheckedText widget
+                      else swUncheckedText widget
+    Right <$> getImageSurface' (ddEngineState dd) imageName
 
 getImageSurface' :: DecorationEngineState CairoDecoration -> String -> X Surface
 getImageSurface' st imageName = do
@@ -537,19 +539,19 @@ loadImageSurface path =
     _ -> createImageSurface FormatARGB32 32 32
 
 cairoDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
-             -> ModifiedLayout (DecorationEx CairoDecoration DefaultGeometry shrinker) l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration StandardWidget DefaultGeometry shrinker) l Window
 cairoDecoration s theme = decorationEx s theme CairoDecoration def
 
 cairoTabDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
-             -> ModifiedLayout (DecorationEx CairoDecoration TabbedGeometry shrinker) l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration StandardWidget TabbedGeometry shrinker) l Window
 cairoTabDecoration s theme = decorationEx s theme CairoDecoration def
 
 cairoDwmDecoration :: (Shrinker shrinker) => shrinker -> CairoTheme StandardWidget -> l Window
-             -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration StandardWidget DwmGeometry shrinker) l Window
 cairoDwmDecoration shrinker theme = decorationEx shrinker theme CairoDecoration def
 
 cairoDwmDecorationEx :: (Shrinker shrinker) => shrinker -> DwmGeometry Window -> CairoTheme StandardWidget -> l Window
-             -> ModifiedLayout (DecorationEx CairoDecoration DwmGeometry shrinker) l Window
+             -> ModifiedLayout (DecorationEx CairoDecoration StandardWidget DwmGeometry shrinker) l Window
 cairoDwmDecorationEx shrinker geom theme = decorationEx shrinker theme CairoDecoration geom
 
 toggleStickyC = StandardWidget "sticky.png" "sticky.png" ToggleSticky
