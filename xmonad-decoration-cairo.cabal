@@ -22,6 +22,7 @@ library
   exposed-modules:
       Graphics.X11.Cairo.CairoSurface
       XMonad.Layout.DecorationEx.CairoDecoration
+      XMonad.Layout.DecorationEx.WindowIcon
   other-modules:
       Paths_xmonad_decoration_cairo
   autogen-modules:
