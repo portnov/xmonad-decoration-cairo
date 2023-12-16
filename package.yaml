@@ -28,6 +28,8 @@ dependencies:
     #- gi-cairo-render
     #- gi-cairo-connector
     #- gi-rsvg
+  - aeson >= 2.0
+  - yaml
 
 ghc-options:
   - -Wunused-imports

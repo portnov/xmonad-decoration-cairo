@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module XMonad.Layout.DecorationEx.Cairo.Theme (
     ImageUsage (..),
@@ -25,10 +26,9 @@ import qualified Data.Map as M
 import Data.Default
 import Numeric (readHex)
 import Graphics.Rendering.Cairo as Cairo
-import System.FilePath
 
 import XMonad
-import XMonad.Prelude
+import XMonad.Prelude (fi)
 import qualified XMonad.Layout.Decoration as D
 import XMonad.Layout.DecorationEx
 
@@ -52,20 +52,20 @@ stringToColor ('#' : hx) =
 stringToColor _ = (0.0, 0.0, 0.0)
 
 data CairoTheme widget = CairoTheme {
-    ctActive :: CairoStyle
-  , ctInactive :: CairoStyle
-  , ctUrgent :: CairoStyle
-  , ctPadding :: BoxBorders Dimension
-  , ctFontName :: String
-  , ctFontSize :: Int
-  , ctFontWeight :: FontWeight
-  , ctFontSlant :: FontSlant
-  , ctOnDecoClick :: M.Map Int (WidgetCommand widget)
-  , ctDragWindowButtons :: [Int]
-  , ctIconsPath :: FilePath
-  , ctWidgetsLeft :: [widget]
-  , ctWidgetsCenter :: [widget]
-  , ctWidgetsRight :: [widget]
+    ctActive :: !CairoStyle
+  , ctInactive :: !CairoStyle
+  , ctUrgent :: !CairoStyle
+  , ctPadding :: !(BoxBorders Dimension)
+  , ctFontName :: !String
+  , ctFontSize :: !Int
+  , ctFontWeight :: !FontWeight
+  , ctFontSlant :: !FontSlant
+  , ctOnDecoClick :: !(M.Map Int (WidgetCommand widget))
+  , ctDragWindowButtons :: ![Int]
+  , ctIconsPath :: !FilePath
+  , ctWidgetsLeft :: ![widget]
+  , ctWidgetsCenter :: ![widget]
+  , ctWidgetsRight :: ![widget]
   }
 
 deriving instance (Show widget, Show (WidgetCommand widget)) => Show (CairoTheme widget)
@@ -83,15 +83,15 @@ data ImageUsage = TileImage | ScaleImage
   deriving (Eq, Show, Read)
 
 data Fill =
-    Flat String
-  | Gradient GradientType GradientStops
-  | Image ImageUsage FilePath
+    Flat !String
+  | Gradient !GradientType !GradientStops
+  | Image !ImageUsage !FilePath
   deriving (Eq, Show, Read)
 
 data PanelBackground = PanelBackground {
-    cpLeftImage :: Maybe FilePath
-  , cpMiddle :: Maybe Fill
-  , cpRightImage :: Maybe FilePath
+    cpLeftImage :: !(Maybe FilePath)
+  , cpMiddle :: !(Maybe Fill)
+  , cpRightImage :: !(Maybe FilePath)
   }
   deriving (Eq, Show, Read)
 
@@ -99,13 +99,13 @@ instance Default PanelBackground where
   def = PanelBackground Nothing Nothing Nothing
 
 data CairoStyle = CairoStyle {
-    csBackground :: Fill
-  , csWidgetsBackground :: (Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
-  , csPadCentralPanelForWidgets :: Bool
-  , csCentralPanelBackground :: PanelBackground
-  , csTextColor :: String
-  , csDecoBorderWidth :: Dimension
-  , csDecorationBorders :: BorderColors
+    csBackground :: !Fill
+  , csWidgetsBackground :: !(Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
+  , csPadCentralPanelForWidgets :: !Bool
+  , csCentralPanelBackground :: !PanelBackground
+  , csTextColor :: !String
+  , csDecoBorderWidth :: !Dimension
+  , csDecorationBorders :: !BorderColors
   }
   deriving (Show, Read)
 
