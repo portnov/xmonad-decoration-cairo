@@ -582,5 +582,5 @@ closeC = GenericWidget "png/close.png" "png/close.png" CloseWindow
 dwmpromoteC = GenericWidget "png/demote.png" "png/promote.png" DwmPromote
 moveToNextGroupC = GenericWidget "" "png/right.png" MoveToNextGroup
 moveToPrevGroupC = GenericWidget "" "png/left.png" MoveToPrevGroup
-windowIconC = WindowIcon FocusWindow
+windowIconC = WindowIcon GridWindowMenu
 
