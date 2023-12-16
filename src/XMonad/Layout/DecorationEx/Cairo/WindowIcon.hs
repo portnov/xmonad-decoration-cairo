@@ -1,5 +1,5 @@
 
-module XMonad.Layout.DecorationEx.WindowIcon (
+module XMonad.Layout.DecorationEx.Cairo.WindowIcon (
     getWindowIcon
   ) where
 
