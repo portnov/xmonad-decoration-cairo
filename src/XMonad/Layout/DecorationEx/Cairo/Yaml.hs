@@ -10,11 +10,13 @@ module XMonad.Layout.DecorationEx.Cairo.Yaml (
   ) where
 
 import Control.Applicative
-import Control.Monad.IO.Class
 import qualified Data.Text as T
+import qualified Data.Map as M
 import Data.Aeson.Types
 import Data.Yaml
+import System.FilePath
 
+import XMonad
 import XMonad.Layout.DecorationEx
 import XMonad.Layout.DecorationEx.Cairo.Theme
 
@@ -29,9 +31,9 @@ instance (FromJSON widget, FromJSON (WidgetCommand widget))
       <*> v .:? "font_size" .!= 12
       <*> v .:? "font_weight" .!= FontWeightNormal
       <*> v .:? "font_slant" .!= FontSlantNormal
-      <*> v .: "on_click"
+      <*> v .:? "on_click" .!= M.empty
       <*> v .:? "drag_buttons" .!= [1]
-      <*> v .: "images_path"
+      <*> v .:? "images_path" .!= ""
       <*> v .: "widgets_left"
       <*> v .: "widgets_center"
       <*> v .: "widgets_right"
@@ -75,26 +77,28 @@ instance FromJSON Fill where
 
 instance FromJSON PanelBackground where
   parseJSON = withObject "PanelBackground" $ \v -> PanelBackground
-    <$> v .: "left_image"
-    <*> v .: "middle"
-    <*> v .: "right_image"
+    <$> v .:? "left_image"
+    <*> v .:? "middle"
+    <*> v .:? "right_image"
 
-parseWidgetsBg :: Value -> Parser (Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
-parseWidgetsBg = withObject "WidgetsBackground" $ \v -> do
-  left <- v .: "left"
-  center <- v .: "center"
-  right <- v .: "right"
-  return (left, center, right)
+parseWidgetsBg :: Maybe Value -> Parser (Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
+parseWidgetsBg Nothing = pure (Nothing, Nothing, Nothing)
+parseWidgetsBg (Just o) =
+  (withObject "WidgetsBackground" $ \v -> do
+    left <- v .:? "left"
+    center <- v .:? "center"
+    right <- v .:? "right"
+    return (left, center, right)) o
 
 instance FromJSON CairoStyle where
   parseJSON = withObject "Style" $ \v -> CairoStyle
     <$> v .: "background"
-    <*> (parseWidgetsBg =<< v .: "widgets_background")
+    <*> (parseWidgetsBg =<< v .:? "widgets_background")
     <*> v .:? "pad_central_panel_for_widgets" .!= True
-    <*> v .: "central_panel_background"
-    <*> v .: "text_color"
+    <*> v .:? "central_panel_background" .!= def
+    <*> v .:? "text_color" .!= "#000000"
     <*> v .:? "border_width" .!= 1
-    <*> v .: "border_colors"
+    <*> v .:? "border_colors" .!= shadowBorder "#dddddd" "#333333"
 
 instance FromJSON StandardCommand where
   parseJSON (String "focus") = pure FocusWindow
@@ -124,8 +128,16 @@ instance FromJSON (GenericWidget StandardCommand) where
           <*> v .: "command"
         ) o
 
-loadTheme :: (FromJSON widget, FromJSON (WidgetCommand widget), MonadIO m)
+loadTheme :: (FromJSON widget, FromJSON (WidgetCommand widget))
           => FilePath
-          -> m (CairoTheme widget)
-loadTheme path = Data.Yaml.decodeFileThrow path
+          -> IO (CairoTheme widget)
+loadTheme name = do
+  dirs <- XMonad.getDirectories
+  let path = dataDir dirs </> "themes" </> name
+      yamlPath = path </> "theme.yaml"
+  theme <- Data.Yaml.decodeFileThrow yamlPath
+  let theme' = if ctIconsPath theme == ""
+                 then theme {ctIconsPath = path}
+                 else theme
+  return theme'
 

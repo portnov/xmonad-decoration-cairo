@@ -425,11 +425,11 @@ cairoDwmDecorationEx :: (Shrinker shrinker) => shrinker -> DwmGeometry Window ->
 cairoDwmDecorationEx shrinker geom theme = decorationEx shrinker theme CairoDecoration geom
 
 toggleStickyC = GenericWidget "sticky.png" "sticky.png" ToggleSticky
-minimizeC = GenericWidget "png/minimize.png" "png/minimize.png" Minimize
-maximizeC = GenericWidget "png/maximize.png" "png/maximize.png" ToggleMaximize
-closeC = GenericWidget "png/close.png" "png/close.png" CloseWindow
-dwmpromoteC = GenericWidget "png/demote.png" "png/promote.png" DwmPromote
-moveToNextGroupC = GenericWidget "" "png/right.png" MoveToNextGroup
-moveToPrevGroupC = GenericWidget "" "png/left.png" MoveToPrevGroup
+minimizeC = GenericWidget "minimize.png" "minimize.png" Minimize
+maximizeC = GenericWidget "maximize.png" "maximize.png" ToggleMaximize
+closeC = GenericWidget "close.png" "close.png" CloseWindow
+dwmpromoteC = GenericWidget "demote.png" "promote.png" DwmPromote
+moveToNextGroupC = GenericWidget "" "right.png" MoveToNextGroup
+moveToPrevGroupC = GenericWidget "" "left.png" MoveToPrevGroup
 windowIconC = WindowIcon GridWindowMenu
 

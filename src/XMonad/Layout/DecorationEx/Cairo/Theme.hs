@@ -17,7 +17,8 @@ module XMonad.Layout.DecorationEx.Cairo.Theme (
     simpleGradient,
     stripesGradient,
     themeC,
-    stringToColor
+    stringToColor,
+    getActiveBorderColor, getInactiveBorderColor
   ) where
 
 import Data.Word
@@ -167,4 +168,10 @@ instance (Show widget, Read widget, Read (WidgetCommand widget), Show (WidgetCom
   defaultBgColor t = "#888888"
   widgetsPadding = ctPadding
   themeFontName = ctFontName
+
+getActiveBorderColor :: CairoTheme widget -> String
+getActiveBorderColor theme = bxBottom $ csDecorationBorders $ ctActive theme
+
+getInactiveBorderColor :: CairoTheme widget -> String
+getInactiveBorderColor theme = bxBottom $ csDecorationBorders $ ctInactive theme
 
