@@ -1,0 +1,59 @@
+active:
+  text_color: "#000000"
+  background:
+    gradient: vertical
+    stops:
+      - [0.0, "#BCD3EA"]
+      - [1.0, "#9CB7D2"]
+  border_colors:
+    top: "#BCD3EA" 
+    left: "#BCD3EA" 
+    bottom: "#9CB7D2"
+    right: "#9CB7D2"
+inactive:
+  text_color: "#333333"
+  background:
+    gradient: vertical
+    stops:
+      - [0.0, "#eaeaea"]
+      - [1.0, "#d2d2d2"]
+  border_colors:
+    top: "#eaeaea" 
+    left: "#eaeaea" 
+    bottom: "#d2d2d2"
+    right: "#d2d2d2"
+urgent:
+  background:
+    gradient: vertical
+    stops:
+      - [0.0, "#ffcccc"]
+      - [1.0, "#cc9999"]
+  border_colors:
+    top: "#ffee77" 
+    left: "#ffee77" 
+    bottom: "#b07700"
+    right: "#b07700"
+padding:
+  top: 0
+  bottom: 0
+  left: 1
+  right: 1
+font_name: Noto Sans
+font_size: 14
+font_weight: bold
+widgets_left:
+  - icon:
+      command: focus
+  - title
+widgets_center: []
+widgets_right:
+  - command: minimize
+    checked: minimize.png
+    unchecked: minimize.png
+  - command: maximize
+    checked: maximize.png
+    unchecked: maximize.png
+  - command: close
+    checked: close.png
+    unchecked: close.png
+
