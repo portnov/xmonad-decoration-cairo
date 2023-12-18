@@ -18,6 +18,7 @@ import System.FilePath
 
 import XMonad
 import XMonad.Layout.DecorationEx
+import XMonad.Layout.DecorationEx.Types
 import XMonad.Layout.DecorationEx.Cairo.Theme
 
 instance (FromJSON widget, FromJSON (WidgetCommand widget))

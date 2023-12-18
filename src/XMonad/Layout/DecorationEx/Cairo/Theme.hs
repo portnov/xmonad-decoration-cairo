@@ -32,6 +32,8 @@ import XMonad
 import XMonad.Prelude (fi)
 import qualified XMonad.Layout.Decoration as D
 import XMonad.Layout.DecorationEx
+import XMonad.Layout.DecorationEx.Types
+import XMonad.Layout.DecorationEx.Engine
 
 deriving instance Read FontWeight
 deriving instance Read FontSlant

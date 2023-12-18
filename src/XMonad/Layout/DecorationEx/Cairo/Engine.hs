@@ -27,11 +27,14 @@ import System.FilePath
 
 import XMonad
 import XMonad.Prelude
-import XMonad.Layout.Decoration (ModifiedLayout, Shrinker (..))
+import XMonad.Layout.LayoutModifier
 import qualified XMonad.Layout.Decoration as D
 import qualified XMonad.Util.ExtensibleState as XS
 
 import XMonad.Layout.DecorationEx
+import XMonad.Layout.DecorationEx.Types
+import XMonad.Layout.DecorationEx.Engine
+import XMonad.Layout.DecorationEx.Widgets
 
 import Graphics.X11.Cairo.CairoSurface
 import XMonad.Layout.DecorationEx.Cairo.Theme
@@ -108,8 +111,6 @@ instance (CairoWidget widget, ClickHandler CairoTheme widget) => DecorationEngin
     D.shrinkWhile s (\n -> do
                            size <- calcWidth n
                            return $ size > fromIntegral wh) name
-
-  placeWidgets = defaultPlaceWidgets
 
   paintDecoration engine win windowWidth windowHeight shrinker dd isExpose = do
       dpy <- asks display
