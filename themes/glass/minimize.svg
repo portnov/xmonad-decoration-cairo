@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3 (1:1.3+202307231459+0e150ed6c4)"
+   sodipodi:docname="minimize.svg"
+   inkscape:export-filename="minimize.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="9.5149208"
+     inkscape:cx="19.968637"
+     inkscape:cy="28.06119"
+     inkscape:window-width="1916"
+     inkscape:window-height="1140"
+     inkscape:window-x="0"
+     inkscape:window-y="28"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2"
+       id="radialGradient5"
+       cx="117.27234"
+       cy="85.27475"
+       fx="117.27234"
+       fy="85.27475"
+       r="3.8572469"
+       gradientTransform="matrix(-9.528363e-4,1.4324811,-5.6141733,-0.00351505,485.18059,-164.08651)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       id="linearGradient2"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#f2f2f2;stop-opacity:0.5;"
+         offset="0"
+         id="stop2" />
+      <stop
+         style="stop-color:#dedede;stop-opacity:0.5;"
+         offset="0.44121498"
+         id="stop4" />
+      <stop
+         style="stop-color:#919191;stop-opacity:0.5;"
+         offset="0.50828296"
+         id="stop5" />
+      <stop
+         style="stop-color:#c9c9c9;stop-opacity:0.5;"
+         offset="1"
+         id="stop3" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5"
+       id="linearGradient7"
+       x1="117.0036"
+       y1="87.627495"
+       x2="117.0036"
+       y2="89.866074"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.5088931,0,0,1.5429461,-170.5575,-130.55121)" />
+    <linearGradient
+       id="linearGradient5"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop6" />
+      <stop
+         style="stop-color:#ededed;stop-opacity:0.68558455;"
+         offset="1"
+         id="stop7" />
+    </linearGradient>
+  </defs>
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;fill-opacity:1;stroke:#070707;stroke-width:0.318929;stroke-dasharray:none;stroke-opacity:0.55625677"
+       id="rect1"
+       width="11.851832"
+       height="6.5636158"
+       x="0.4240872"
+       y="3.0681949"
+       rx="0.59884197"
+       ry="0.61235672" />
+    <rect
+       style="fill:url(#radialGradient5);fill-opacity:1;stroke:#e7e7e7;stroke-width:0.344766;stroke-dasharray:none;stroke-opacity:0.85667068"
+       id="rect2"
+       width="11.299406"
+       height="5.9057174"
+       x="0.70032775"
+       y="3.3971446"
+       rx="0.31938237"
+       ry="0.32659027" />
+    <rect
+       style="fill:url(#linearGradient7);fill-opacity:1;stroke:#070707;stroke-width:0.318929;stroke-dasharray:none;font-variation-settings:normal;opacity:1;vector-effect:none;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:0.56;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1"
+       id="rect10"
+       width="4.1566262"
+       height="1.6428533"
+       x="4.2550673"
+       y="6.5075426"
+       rx="0.32957944"
+       ry="0.3294313" />
+  </g>
+</svg>
