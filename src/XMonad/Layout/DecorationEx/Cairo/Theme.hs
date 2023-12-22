@@ -134,7 +134,7 @@ themeC t =
         , ctOnDecoClick = M.fromList [(1, FocusWindow)]
         , ctDragWindowButtons = [1]
         , ctIconsPath = "."
-        , ctWidgetsLeft = []
+        , ctWidgetsLeft = [WindowIcon FocusWindow, titleW]
         , ctWidgetsCenter = []
         , ctWidgetsRight = []
       }
