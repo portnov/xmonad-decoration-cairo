@@ -32,8 +32,7 @@ import XMonad
 import XMonad.Prelude (fi)
 import qualified XMonad.Layout.Decoration as D
 import XMonad.Layout.DecorationEx
-import XMonad.Layout.DecorationEx.Types
-import XMonad.Layout.DecorationEx.Engine
+import XMonad.Layout.DecorationEx.Common
 
 deriving instance Read FontWeight
 deriving instance Read FontSlant
@@ -150,6 +149,9 @@ themeC t =
         csDecoBorderWidth = borderWidth,
         csDecorationBorders = borderColor brdColor
       }
+
+instance Default (CairoTheme StandardWidget) where
+  def = themeC def
 
 instance ClickHandler CairoTheme StandardWidget where
   onDecorationClick theme button = M.lookup button (ctOnDecoClick theme)

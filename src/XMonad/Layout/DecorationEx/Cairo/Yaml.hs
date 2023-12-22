@@ -18,7 +18,7 @@ import System.FilePath
 
 import XMonad
 import XMonad.Layout.DecorationEx
-import XMonad.Layout.DecorationEx.Types
+import XMonad.Layout.DecorationEx.Common
 import XMonad.Layout.DecorationEx.Cairo.Theme
 
 instance (FromJSON widget, FromJSON (WidgetCommand widget))
@@ -129,16 +129,20 @@ instance FromJSON (GenericWidget StandardCommand) where
           <*> v .: "command"
         ) o
 
-loadTheme :: (FromJSON widget, FromJSON (WidgetCommand widget))
+loadTheme :: (FromJSON widget, FromJSON (WidgetCommand widget), Default (CairoTheme widget))
           => FilePath
           -> IO (CairoTheme widget)
 loadTheme name = do
   dirs <- XMonad.getDirectories
   let path = dataDir dirs </> "themes" </> name
       yamlPath = path </> "theme.yaml"
-  theme <- Data.Yaml.decodeFileThrow yamlPath
-  let theme' = if ctIconsPath theme == ""
+  r <- Data.Yaml.decodeFileEither yamlPath
+  case r of
+    Right theme -> do
+      return $ if ctIconsPath theme == ""
                  then theme {ctIconsPath = path}
                  else theme
-  return theme'
+    Left err -> do 
+      xmessage $ prettyPrintParseException err
+      return def
 

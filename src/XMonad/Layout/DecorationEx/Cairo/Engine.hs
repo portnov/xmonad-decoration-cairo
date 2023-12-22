@@ -32,7 +32,7 @@ import qualified XMonad.Layout.Decoration as D
 import qualified XMonad.Util.ExtensibleState as XS
 
 import XMonad.Layout.DecorationEx
-import XMonad.Layout.DecorationEx.Types
+import XMonad.Layout.DecorationEx.Common
 import XMonad.Layout.DecorationEx.Engine
 import XMonad.Layout.DecorationEx.Widgets
 
