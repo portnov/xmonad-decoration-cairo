@@ -1,0 +1,97 @@
+active:
+  text_color: "#ffffff"
+  background: "#ddddaa"
+  border_width: 0
+  border_colors:
+    top: "#ffee77" 
+    left: "#ffee77" 
+    bottom: "#b07700"
+    right: "#b07700"
+  central_panel_background:
+    expand_middle_to_pads: true
+    left_image: leftpad.png
+    middle:
+      gradient: vertical
+      stops:
+        - [0.0, "#ad7fa8"]
+        - [0.5, "#75507b"]
+        - [0.75, "#66406e"]
+        - [1.0, "#4f2c57"]
+    right_image: rightpad.png
+  widgets_background:
+    left:
+      middle:
+        image: widget-bg.png
+        usage: scale
+    right:
+      middle:
+        image: widget-bg.png
+        usage: scale
+inactive:
+  text_color: "#333333"
+  border_width: 0
+  background:
+    gradient: vertical
+    stops:
+      - [0.0, "#9ea09a"]
+      - [1.0, "#888a85"]
+  border_colors:
+    top: "#a0a29c" 
+    left: "#a0a29c" 
+    bottom: "#7b7d79"
+    right: "#7b7d79"
+  central_panel_background:
+    expand_middle_to_pads: true
+    left_image: leftpad-inactive.png
+    middle:
+      gradient: vertical
+      stops:
+        - [0.0, "#fff7fe"]
+        - [0.5, "#dfd7e0"]
+        - [0.75, "#c0b8c2"]
+        - [1.0, "#979099"]
+    right_image: rightpad-inactive.png
+  widgets_background:
+    left:
+      middle:
+        image: widget-bg-inactive.png
+        usage: scale
+    right:
+      middle:
+        image: widget-bg-inactive.png
+        usage: scale
+urgent:
+  background:
+    gradient: vertical
+    stops:
+      - [0.0, "#ffcccc"]
+      - [1.0, "#cc9999"]
+  border_colors:
+    top: "#ffee77" 
+    left: "#ffee77" 
+    bottom: "#b07700"
+    right: "#b07700"
+padding:
+  top: 0
+  bottom: 0
+  left: 0
+  right: 0
+font_name: Noto Sans
+font_size: 14
+font_weight: bold
+widgets_left:
+  - icon:
+      command: focus
+widgets_center:
+  - title
+widgets_right:
+  - command: minimize
+    checked: minimize.png
+    unchecked: minimize.png
+  - command: maximize
+    checked: maximize.png
+    unchecked: maximize.png
+  - command: close
+    checked: close.png
+    unchecked: close.png
+
