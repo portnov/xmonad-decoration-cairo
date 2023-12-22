@@ -78,7 +78,8 @@ instance FromJSON Fill where
 
 instance FromJSON PanelBackground where
   parseJSON = withObject "PanelBackground" $ \v -> PanelBackground
-    <$> v .:? "left_image"
+    <$> v .:? "pads_over_middle" .!= True
+    <*> v .:? "left_image"
     <*> v .:? "middle"
     <*> v .:? "right_image"
 

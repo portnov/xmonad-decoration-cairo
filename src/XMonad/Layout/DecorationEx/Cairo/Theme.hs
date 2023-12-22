@@ -91,14 +91,15 @@ data Fill =
   deriving (Eq, Show, Read)
 
 data PanelBackground = PanelBackground {
-    cpLeftImage :: !(Maybe FilePath)
+    cpExpandMiddleToPads :: !Bool
+  , cpLeftImage :: !(Maybe FilePath)
   , cpMiddle :: !(Maybe Fill)
   , cpRightImage :: !(Maybe FilePath)
   }
   deriving (Eq, Show, Read)
 
 instance Default PanelBackground where
-  def = PanelBackground Nothing Nothing Nothing
+  def = PanelBackground False Nothing Nothing Nothing
 
 data CairoStyle = CairoStyle {
     csBackground :: !Fill
