@@ -22,7 +22,6 @@ dependencies:
   - unix >= 2.7.3
   - xmonad >= 0.17
   - xmonad-contrib >= 0.17
-  - xmonad-decoration-ex
   - cairo
     #- gi-cairo
     #- gi-cairo-render
