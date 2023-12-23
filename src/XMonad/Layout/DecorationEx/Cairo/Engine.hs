@@ -56,6 +56,17 @@ data CairoDecorationCache = CairoDecorationCache {
 instance ExtensionClass CairoDecorationCache where
   initialValue = CairoDecorationCache M.empty M.empty M.empty
 
+data RectangleD = RectangleD {
+    rectX :: !Double
+  , rectY :: !Double
+  , rectWidth :: !Double
+  , rectHeight :: !Double
+  }
+  deriving (Eq, Show, Read)
+
+rectangleD :: Rectangle -> RectangleD
+rectangleD (Rectangle x y w h) = RectangleD (fi x) (fi y) (fi w) (fi h)
+
 getImagesCache :: X WidgetSurfaces
 getImagesCache = do
   cache <- XS.get
@@ -204,22 +215,22 @@ paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isEx
       leftPad <- case mbLeftBg of
         Just leftBg -> do
           let leftRect = joinPlaces (wlLeft $ ddWidgetPlaces dd)
-          when (rect_width leftRect > 0) $
-            paintPanel surface leftRect st leftBg Nothing
-          return $ rect_width leftRect
+          if rect_width leftRect > 0
+            then paintPanel surface leftRect st leftBg Nothing
+            else return 0
         Nothing -> return 0
 
       whenJust mbCenterBg $ \centerBg -> do
         let centerRect = joinPlaces (wlCenter $ ddWidgetPlaces dd)
         when (rect_width centerRect > 0) $
-          paintPanel surface centerRect st centerBg Nothing
+          void $ paintPanel surface centerRect st centerBg Nothing
 
       rightPad <- case mbRightBg of
         Just rightBg -> do
           let rightRect = joinPlaces (wlRight $ ddWidgetPlaces dd)
-          when (rect_width rightRect > 0) $
-            paintPanel surface rightRect st rightBg Nothing
-          return $ rect_width rightRect
+          if rect_width rightRect > 0
+            then paintPanel surface rightRect st rightBg Nothing
+            else return 0
         Nothing -> return 0
 
       paintPanel surface ((ddDecoRect dd) {rect_x = 0, rect_y = 0}) (ddEngineState dd) (csCentralPanelBackground style) $ mkPads style leftPad rightPad
@@ -292,36 +303,24 @@ paintImageScaled image x y width height = do
   fill
   identityMatrix
 
-paintImageFitHeightR :: Surface -> Double -> Double -> Double -> Render ()
-paintImageFitHeightR image x y height = do
-  imgWidth <- io $ imageSurfaceGetWidth image
-  imgHeight <- io $ imageSurfaceGetHeight image
-  let scaleY = height / fi imgHeight
-  translate x y
-  scale scaleY scaleY
-  setSourceSurface image 0 0
-  rectangle 0 0 (fi imgWidth) (fi imgHeight)
-  fill
-  identityMatrix
-
-paintImageFitHeight :: Surface -> DecorationEngineState CairoDecoration -> FilePath -> Position -> Position -> Dimension -> Bool -> X (Int, Int)
+paintImageFitHeight :: Surface -> DecorationEngineState CairoDecoration -> FilePath -> Double -> Double -> Double -> Bool -> X (Double, Double)
 paintImageFitHeight surface st imageName x y height alignRight = do
   image <- getImageSurface' st imageName
   imgWidth <- io $ imageSurfaceGetWidth image
   imgHeight <- io $ imageSurfaceGetHeight image
-  let scaleY = fi height / fi imgHeight :: Double
+  let scaleY = height / fi imgHeight :: Double
       scaledImgWidth = scaleY * fi imgWidth
       x' = if alignRight
-             then fi x - scaledImgWidth
-             else fi x
+             then x - scaledImgWidth
+             else x
   renderWith surface $ do
-    translate x' (fi y)
+    translate x' y
     scale scaleY scaleY
     setSourceSurface image 0 0
     rectangle 0 0 (fi imgWidth) (fi imgHeight)
     fill
     identityMatrix
-  return (round scaledImgWidth, fi height)
+  return (scaledImgWidth, height)
 
 paintImage :: Surface -> DecorationEngineState CairoDecoration -> FilePath -> Position -> Position -> Bool -> X (Int, Int)
 paintImage surface st imageName x y alignRight = do
@@ -337,49 +336,53 @@ paintImage surface st imageName x y alignRight = do
     fill
   return (imgWidth, imgHeight)
 
-mkPads :: CairoStyle -> Dimension -> Dimension -> Maybe (Dimension, Dimension)
+mkPads :: CairoStyle -> Double -> Double -> Maybe (Double, Double)
 mkPads style leftPad rightPad =
   if csPadCentralPanelForWidgets style
     then Just (leftPad, rightPad)
     else Nothing
 
-paintPanel :: Surface -> Rectangle -> DecorationEngineState CairoDecoration -> PanelBackground -> Maybe (Dimension, Dimension) -> X ()
+paintPanel :: Surface -> Rectangle -> DecorationEngineState CairoDecoration -> PanelBackground -> Maybe (Double, Double) -> X Double
 paintPanel surface panelRect st bg mbPads = do
     let rect = case mbPads of 
-                 Just (leftPad, rightPad) -> padW True leftPad rightPad panelRect
-                 Nothing -> panelRect
+                 Just (leftPad, rightPad) -> padW True leftPad rightPad $ rectangleD panelRect
+                 Nothing -> rectangleD panelRect
     if cpExpandMiddleToPads bg
       then do
         paintMiddle 0 0 rect
         whenJust (cpLeftImage bg) $ \imageName ->
-          void $ paintImageFitHeight surface st imageName (rect_x rect) 0 (rect_height rect) False
+          void $ paintImageFitHeight surface st imageName (rectX rect) 0 (rectHeight rect) False
         whenJust (cpRightImage bg) $ \imageName ->
-          void $ paintImageFitHeight surface st imageName (rect_x rect + fi (rect_width rect)) 0 (rect_height rect) True
+          void $ paintImageFitHeight surface st imageName (rectX rect + rectWidth rect) 0 (rectHeight rect) True
+        return $ fi $ rect_width panelRect
       else do
         leftPad' <-
           case cpLeftImage bg of
             Just imageName -> do
-              sz <- paintImageFitHeight surface st imageName (rect_x rect) 0 (rect_height rect) False
+              sz <- paintImageFitHeight surface st imageName (rectX rect) 0 (rectHeight rect) False
               return $ fst sz
             Nothing -> return 0
         rightPad' <-
           case cpRightImage bg of
             Just imageName -> do
-              sz <- paintImageFitHeight surface st imageName (rect_x rect + fi (rect_width rect)) 0 (rect_height rect) True
+              sz <- paintImageFitHeight surface st imageName (rectX rect + rectWidth rect) 0 (rectHeight rect) True
               return $ fst sz
             Nothing -> return 0
         paintMiddle leftPad' rightPad' rect
+        return $ fi $ rect_width panelRect
   where
-    padW keepX left right (Rectangle x y w h) =
-      let x' = if keepX then  x + fi left else fi left
+    padW :: Bool -> Double -> Double -> RectangleD -> RectangleD
+    padW keepX left right (RectangleD x y w h) =
+      let x' = if keepX then  x + left else left
           w' = w - left - right
-      in  Rectangle x' y w' h
+      in  RectangleD x' y w' h
 
+    paintMiddle :: Double -> Double -> RectangleD -> X ()
     paintMiddle leftPad' rightPad' rect =
       whenJust (cpMiddle bg) $ \middle -> do
-        let rect' = padW True (fi leftPad') (fi rightPad') rect
-        paintBackground surface st middle (fi $ rect_x rect') (fi $ rect_y rect')
-                                          (fi $ rect_width rect') (fi $ rect_height rect')
+        let rect' = padW True leftPad' rightPad' rect
+        paintBackground surface st middle (rectX rect') (rectY rect')
+                                          (rectWidth rect') (rectHeight rect')
 
 class DecorationWidget widget => CairoWidget widget where
   getWidgetImage :: DrawData CairoDecoration widget -> widget -> X (Either String Surface)
