@@ -233,7 +233,7 @@ paintDecorationImpl surface engine win windowWidth windowHeight shrinker dd isEx
             else return 0
         Nothing -> return 0
 
-      paintPanel surface ((ddDecoRect dd) {rect_x = 0, rect_y = 0}) (ddEngineState dd) (csCentralPanelBackground style) $ mkPads style leftPad rightPad
+      paintPanel surface ((ddDecoRect dd) {rect_x = 0, rect_y = 0}) st (csCentralPanelBackground style) $ mkPads style leftPad rightPad
 
       io $ renderWith surface $ do
         when (borderWidth > 0) $ do
