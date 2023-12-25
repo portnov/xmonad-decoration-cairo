@@ -12,6 +12,7 @@ module XMonad.Layout.DecorationEx.Cairo.Theme (
     PanelBackground (..),
     GradientStops (..), GradientType (..),
     FontWeight (..), FontSlant (..),
+    TextShadow (..),
     CairoStyle (..),
     CairoTheme (..),
     simpleGradient,
@@ -101,12 +102,20 @@ data PanelBackground = PanelBackground {
 instance Default PanelBackground where
   def = PanelBackground False Nothing Nothing Nothing
 
+data TextShadow = TextShadow {
+    tsColor :: !String
+  , tsDeltaX :: !Double
+  , tsDeltaY :: !Double
+  }
+  deriving (Show, Read)
+
 data CairoStyle = CairoStyle {
     csBackground :: !Fill
   , csWidgetsBackground :: !(Maybe PanelBackground, Maybe PanelBackground, Maybe PanelBackground)
   , csPadCentralPanelForWidgets :: !Bool
   , csCentralPanelBackground :: !PanelBackground
   , csTextColor :: !String
+  , csTextShadow :: !(Maybe TextShadow)
   , csDecoBorderWidth :: !Dimension
   , csDecorationBorders :: !BorderColors
   }
@@ -147,6 +156,7 @@ themeC t =
         csPadCentralPanelForWidgets = True,
         csCentralPanelBackground = def,
         csTextColor = textColor,
+        csTextShadow = Nothing,
         csDecoBorderWidth = borderWidth,
         csDecorationBorders = borderColor brdColor
       }

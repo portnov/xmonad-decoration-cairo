@@ -181,9 +181,16 @@ instance (CairoWidget widget, ClickHandler CairoTheme widget) => DecorationEngin
                   then getShrinkedWindowName engine shrinker st str (rect_width rect) (rect_height rect) 
                   else return str
         io $ renderWith surface $ do
-          setSourceRGB textR textG textB
           setFontSize (fi $ cdssFontSize st)
           selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
+
+          whenJust (csTextShadow style) $ \shadow -> do
+            moveTo (fi x + tsDeltaX shadow) (fi y + tsDeltaY shadow)
+            let (shadowR, shadowG, shadowB) = stringToColor (tsColor shadow)
+            setSourceRGB shadowR shadowG shadowB
+            showText str'
+
+          setSourceRGB textR textG textB
           moveTo (fi x) (fi y)
           showText str'
       Right image -> do

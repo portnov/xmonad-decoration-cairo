@@ -92,6 +92,12 @@ parseWidgetsBg (Just o) =
     right <- v .:? "right"
     return (left, center, right)) o
 
+instance FromJSON TextShadow where
+  parseJSON = withObject "TextShadow" $ \v -> TextShadow
+    <$> v .: "color"
+    <*> v .:? "delta_x" .!= 1
+    <*> v .:? "delta_y" .!= 1
+
 instance FromJSON CairoStyle where
   parseJSON = withObject "Style" $ \v -> CairoStyle
     <$> v .: "background"
@@ -99,6 +105,7 @@ instance FromJSON CairoStyle where
     <*> v .:? "pad_central_panel_for_widgets" .!= True
     <*> v .:? "central_panel_background" .!= def
     <*> v .:? "text_color" .!= "#000000"
+    <*> v .:? "text_shadow"
     <*> v .:? "border_width" .!= 1
     <*> v .:? "border_colors" .!= shadowBorder "#dddddd" "#333333"
 
