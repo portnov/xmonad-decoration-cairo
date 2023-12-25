@@ -1,5 +1,7 @@
 active:
   text_color: "#000000"
+  text_shadow:
+    color: "#ffffff"
   background:
     image: pattern.png
   border_colors:
@@ -9,6 +11,8 @@ active:
     right: "#b07700"
 inactive:
   text_color: "#333333"
+  text_shadow:
+    color: "#eeeeee"
   background:
     gradient: vertical
     stops:
