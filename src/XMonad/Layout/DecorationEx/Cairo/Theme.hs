@@ -164,7 +164,7 @@ themeC t =
 instance Default (CairoTheme StandardWidget) where
   def = themeC def
 
-instance ClickHandler CairoTheme StandardWidget where
+instance ClickHandler CairoTheme widget where
   onDecorationClick theme button = M.lookup button (ctOnDecoClick theme)
   isDraggingEnabled theme button = button `elem` ctDragWindowButtons theme
 
