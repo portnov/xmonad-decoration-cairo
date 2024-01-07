@@ -25,6 +25,7 @@ import Graphics.Rendering.Cairo as Cairo
 -- import qualified GI.Cairo.Render.Connector as Connector
 -- import qualified GI.Rsvg as Rsvg
 import System.FilePath
+import Control.Exception
 
 import XMonad
 import XMonad.Prelude
@@ -112,7 +113,7 @@ instance (CairoWidget widget, ClickHandler CairoTheme widget) => DecorationEngin
       -- io $ Internal.surfaceDestroy surface
 
   getShrinkedWindowName engine shrinker st name wh ht = do
-    let calcWidth text =
+    let calcWidth text = do
           io $ withImageSurface FormatARGB32 (fi wh) (fi ht) $ \surface ->
             renderWith surface $ do
               setFontSize (fi $ cdssFontSize st)
@@ -146,18 +147,21 @@ instance (CairoWidget widget, ClickHandler CairoTheme widget) => DecorationEngin
     res <- getWidgetImage dd widget
     case res of
       Left str -> do
-        io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
-          renderWith surface $ do
-            let st = ddEngineState dd
-            setFontSize (fi $ cdssFontSize st)
-            selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
-            ext <- Cairo.textExtents str
-            let textWidth = textExtentsWidth ext
-                textHeight = textExtentsHeight ext
-                y = (fi decoHeight - textHeight) / 2.0
-                y0 = round $ y - textExtentsYbearing ext
-                rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
-            return $ WidgetPlace y0 rect
+        if decoWidth > 32767
+          then return $ WidgetPlace 0 $ Rectangle 0 0 0 0
+          else do
+            io $ withImageSurface FormatARGB32 decoWidth decoHeight $ \surface ->
+              renderWith surface $ do
+                let st = ddEngineState dd
+                setFontSize (fi $ cdssFontSize st)
+                selectFontFace (cdssFontName st) (cdssFontSlant st) (cdssFontWeight st)
+                ext <- Cairo.textExtents str
+                let textWidth = textExtentsWidth ext
+                    textHeight = textExtentsHeight ext
+                    y = (fi decoHeight - textHeight) / 2.0
+                    y0 = round $ y - textExtentsYbearing ext
+                    rect = Rectangle 0 (round y) (round textWidth) (round textHeight)
+                return $ WidgetPlace y0 rect
       Right image -> do
         imgWidth <- io $ imageSurfaceGetWidth image
         imgHeight <- io $ imageSurfaceGetHeight image
@@ -382,7 +386,7 @@ paintPanel surface panelRect st bg mbPads = do
     padW :: Bool -> Double -> Double -> RectangleD -> RectangleD
     padW keepX left right (RectangleD x y w h) =
       let x' = if keepX then  x + left else left
-          w' = w - left - right
+          w' = max 1 $ w - left - right
       in  RectangleD x' y w' h
 
     paintMiddle :: Double -> Double -> RectangleD -> X ()
