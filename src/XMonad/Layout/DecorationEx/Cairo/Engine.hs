@@ -7,6 +7,7 @@
 
 module XMonad.Layout.DecorationEx.Cairo.Engine (
     CairoDecoration (..),
+    CairoWidget (..),
     cairoDecoration,
     cairoTabDecoration,
     cairoDwmDecoration,
