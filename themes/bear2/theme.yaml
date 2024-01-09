@@ -9,9 +9,9 @@ active:
       - [1.0, "#407CCA"]
   border_colors:
     top: "#699acd" 
-    left: "#ffee77" 
-    bottom: "#ffee77"
-    right: "#ffee77"
+    left: "#699acd" 
+    bottom: "#699acd"
+    right: "#699acd"
 inactive:
   text_color: "#888a85"
   text_shadow:
