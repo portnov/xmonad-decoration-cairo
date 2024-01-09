@@ -43,7 +43,7 @@ padding:
   left: 0
   right: 0
 font_name: Noto Sans
-font_size: 12
+font_size: 14
 font_weight: bold
 widgets_left:
   - icon:
