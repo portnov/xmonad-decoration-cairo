@@ -8,10 +8,10 @@ active:
       - [0.0, "#778361"]
       - [1.0, "#B1C391"]
   border_colors:
-    top: "#F9F5D7" 
-    left: "#F9F5D7" 
-    bottom: "#F9F5D7"
-    right: "#F9F5D7"
+    top: "#C8D4B2" 
+    left: "#C8D4B2" 
+    bottom: "#C8D4B2"
+    right: "#C8D4B2"
 inactive:
   text_color: "#888a85"
   text_shadow:
