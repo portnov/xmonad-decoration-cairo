@@ -44,8 +44,8 @@ urgent:
 padding:
   top: 0
   bottom: 0
-  left: 0
-  right: 0
+  left: 2
+  right: 2
 font_name: noto sans
 font_size: 14
 font_weight: bold
