@@ -144,6 +144,7 @@ loadTheme name = do
   dirs <- XMonad.getDirectories
   let path = dataDir dirs </> "themes" </> name
       yamlPath = path </> "theme.yaml"
+  putStrLn $ "Reading theme Yaml file: " ++ yamlPath
   r <- Data.Yaml.decodeFileEither yamlPath
   case r of
     Right theme -> do
